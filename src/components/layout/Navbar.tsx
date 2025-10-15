@@ -37,6 +37,12 @@ export const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
+              <Link to="/nosotros" className="nav-link">
+                <i className="fas fa-info-circle me-1"></i>
+                Nosotros
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link to="/carrito" className="nav-link position-relative">
                 <i className="fas fa-shopping-cart me-1"></i>
                 Carrito
@@ -89,13 +95,13 @@ export const Navbar = () => {
             ) : (
               <>
                 <li className="nav-item">
-                  <Link to="/auth/login" className="nav-link">
+                  <Link to="/login" className="nav-link">
                     <i className="fas fa-sign-in-alt me-1"></i>
                     Iniciar Sesión
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/auth/registro" className="btn btn-success ms-2">
+                  <Link to="/registro" className="btn btn-success ms-2">
                     <i className="fas fa-user-plus me-1"></i>
                     Registrarse
                   </Link>

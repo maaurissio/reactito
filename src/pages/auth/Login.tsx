@@ -1,167 +1,184 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import type { FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 
 export const Login = () => {
-  const navigate = useNavigate();
-  const { login } = useAuthStore();
-  const [formData, setFormData] = useState({
-    emailOUsuario: '',
-    password: '',
-  });
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  
+  const { login } = useAuthStore();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    setSuccess(false);
 
     try {
-      const success = await login(formData.emailOUsuario, formData.password);
-      if (success) {
-        navigate('/');
+      const resultado = await login(email, password);
+      
+      if (resultado) {
+        setSuccess(true);
+        // Redirigir después de un momento
+        setTimeout(() => {
+          const paginaOrigen = localStorage.getItem('paginaOrigen');
+          if (paginaOrigen && paginaOrigen !== '/login') {
+            localStorage.removeItem('paginaOrigen');
+            navigate(paginaOrigen);
+          } else {
+            navigate('/');
+          }
+        }, 1500);
       } else {
-        setError('Usuario o contraseña incorrectos');
+        setError('Credenciales incorrectas');
+        setIsLoading(false);
       }
     } catch (err) {
-      setError('Error al iniciar sesión');
-    } finally {
+      setError('Error de conexión');
       setIsLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
   return (
-    <section className="login-page min-vh-100 d-flex align-items-center bg-light">
+    <section className="py-5">
       <div className="container">
         <div className="row justify-content-center">
-          <div className="col-lg-10 col-xl-9">
-            <div className="card login-card shadow-lg">
+          <div className="col-md-10 col-lg-8">
+            <div className="card shadow-lg rounded-4 overflow-hidden">
               <div className="row g-0">
-                {/* Lado izquierdo con imagen */}
-                <div className="col-lg-6 d-none d-lg-block">
-                  <div className="login-image-side h-100 position-relative">
-                    <div className="login-image-overlay">
-                      <div className="text-white text-center p-4">
-                        <i className="fas fa-leaf fa-4x mb-3"></i>
-                        <h2 className="fw-bold">HuertoHogar</h2>
-                        <p className="lead">
-                          Productos frescos del campo a tu hogar
-                        </p>
-                      </div>
+                {/* Imagen izquierda como fondo completo */}
+                <div 
+                  className="col-md-6 position-relative" 
+                  style={{
+                    backgroundImage: 'url(\'/img/huerto.webp\')',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    minHeight: '500px'
+                  }}
+                >
+                  {/* Overlay sutil */}
+                  <div 
+                    className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column p-4" 
+                    style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.4))' }}
+                  >
+                    {/* Contenido central */}
+                    <div className="d-flex flex-column justify-content-center flex-grow-1 text-center text-white">
+                      <h3 className="fw-bold" style={{ fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>
+                        ¡Productos Frescos!
+                      </h3>
+                      <p className="mb-0" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
+                        Directo del huerto a tu hogar
+                      </p>
+                    </div>
+                    
+                    {/* Botón alineado con el botón del formulario */}
+                    <div className="text-center" style={{ marginBottom: '3rem' }}>
+                      <p className="text-white mb-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
+                        ¿No tienes cuenta?
+                      </p>
+                      <Link 
+                        to="/registro" 
+                        className="text-white text-decoration-none simple-link"
+                        onClick={() => localStorage.setItem('paginaOrigen', window.location.pathname)}
+                      >
+                        Regístrate aquí
+                      </Link>
                     </div>
                   </div>
                 </div>
 
-                {/* Lado derecho con formulario */}
-                <div className="col-lg-6">
-                  <div className="card-body p-5">
+                {/* Formulario derecha */}
+                <div className="col-md-6 d-flex align-items-center">
+                  <div className="w-100 p-5">
                     <div className="text-center mb-4">
-                      <h3 className="fw-bold text-success">Iniciar Sesión</h3>
-                      <p className="text-muted">Bienvenido de vuelta</p>
+                      <h2 style={{ fontFamily: "'Playfair Display', serif" }} className="text-success mb-2">
+                        Iniciar Sesión
+                      </h2>
+                      <p className="text-muted">Accede a tu cuenta de Huerto Hogar</p>
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                      {error && (
-                        <div className="alert alert-danger" role="alert">
-                          <i className="fas fa-exclamation-circle me-2"></i>
-                          {error}
-                        </div>
-                      )}
-
                       <div className="mb-3">
-                        <label htmlFor="emailOUsuario" className="form-label">
-                          Email o Usuario
-                        </label>
-                        <div className="input-group">
-                          <span className="input-group-text">
-                            <i className="fas fa-user"></i>
-                          </span>
-                          <input
-                            type="text"
-                            className="form-control"
-                            id="emailOUsuario"
-                            name="emailOUsuario"
-                            value={formData.emailOUsuario}
-                            onChange={handleChange}
-                            placeholder="tu@email.com o usuario"
+                        <div className="input-icon-container">
+                          <input 
+                            type="email" 
+                            className="form-control form-control-lg" 
+                            placeholder="Correo Electrónico" 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
+                            disabled={isLoading}
                           />
+                          <i className="fas fa-envelope input-icon"></i>
                         </div>
                       </div>
 
                       <div className="mb-4">
-                        <label htmlFor="password" className="form-label">
-                          Contraseña
-                        </label>
-                        <div className="input-group">
-                          <span className="input-group-text">
-                            <i className="fas fa-lock"></i>
-                          </span>
-                          <input
-                            type="password"
-                            className="form-control"
-                            id="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            placeholder="••••••••"
+                        <div className="input-icon-container">
+                          <input 
+                            type="password" 
+                            className="form-control form-control-lg" 
+                            placeholder="Contraseña" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                             required
+                            disabled={isLoading}
                           />
+                          <i className="fas fa-lock input-icon"></i>
                         </div>
                       </div>
 
-                      <div className="d-grid mb-3">
-                        <button
-                          type="submit"
-                          className="btn btn-success btn-lg"
+                      <div className="mb-3 form-check">
+                        <input 
+                          type="checkbox" 
+                          className="form-check-input" 
+                          id="remember"
+                          checked={remember}
+                          onChange={(e) => setRemember(e.target.checked)}
                           disabled={isLoading}
-                        >
-                          {isLoading ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Iniciando sesión...
-                            </>
-                          ) : (
-                            <>
-                              <i className="fas fa-sign-in-alt me-2"></i>
-                              Iniciar Sesión
-                            </>
-                          )}
-                        </button>
+                        />
+                        <label className="form-check-label" htmlFor="remember">
+                          Recordar mi sesión
+                        </label>
                       </div>
 
-                      <div className="text-center">
-                        <p className="text-muted mb-0">
-                          ¿No tienes cuenta?{' '}
-                          <Link to="/auth/registro" className="text-success fw-semibold">
-                            Regístrate aquí
+                      <div className="mb-4">
+                        <div className="text-center">
+                          <Link to="/olvido-contrasena" className="text-decoration-none small">
+                            ¿Olvidaste tu contraseña?
                           </Link>
-                        </p>
+                        </div>
                       </div>
-                    </form>
 
-                    {/* Credenciales de prueba */}
-                    <div className="demo-credentials mt-4">
-                      <p className="demo-title text-center">
-                        <i className="fas fa-info-circle me-2"></i>
-                        Credenciales de prueba:
-                      </p>
-                      <hr />
-                      <p className="mb-1">
-                        <strong>Admin:</strong> admin@huertohogar.com / admin123
-                      </p>
-                      <p className="mb-0">
-                        <strong>Cliente:</strong> cliente@demo.com / cliente123
-                      </p>
-                    </div>
+                      <button 
+                        type="submit" 
+                        className={`btn btn-lg w-100 mb-3 ${error ? 'btn-danger' : success ? 'btn-success' : 'btn-success'}`}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin"></i> Iniciando...
+                          </>
+                        ) : success ? (
+                          <>
+                            <i className="fas fa-check"></i> ¡Bienvenido!
+                          </>
+                        ) : error ? (
+                          <>
+                            <i className="fas fa-times"></i> {error}
+                          </>
+                        ) : (
+                          'Iniciar Sesión'
+                        )}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>

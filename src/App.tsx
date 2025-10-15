@@ -3,12 +3,13 @@ import { MainLayout } from './components/layout';
 import { ProtectedRoute, PublicRoute } from './routes';
 
 // Pages
-import { Home } from './pages/Home';
+import { Home } from './pages/Home.tsx';
 import { Catalogo } from './pages/tienda/Catalogo';
 import { Carrito } from './pages/tienda/Carrito';
 import { Login } from './pages/auth/Login';
 import { Registro } from './pages/auth/Registro';
 import { Dashboard } from './pages/admin/Dashboard';
+import { Nosotros } from './pages/info/Nosotros';
 
 function App() {
   return (
@@ -39,21 +40,33 @@ function App() {
             </MainLayout>
           }
         />
+        <Route
+          path="/nosotros"
+          element={
+            <MainLayout>
+              <Nosotros />
+            </MainLayout>
+          }
+        />
 
         {/* Rutas de autenticación (solo para no autenticados) */}
         <Route
-          path="/auth/login"
+          path="/login"
           element={
             <PublicRoute>
-              <Login />
+              <MainLayout>
+                <Login />
+              </MainLayout>
             </PublicRoute>
           }
         />
         <Route
-          path="/auth/registro"
+          path="/registro"
           element={
             <PublicRoute>
-              <Registro />
+              <MainLayout>
+                <Registro />
+              </MainLayout>
             </PublicRoute>
           }
         />

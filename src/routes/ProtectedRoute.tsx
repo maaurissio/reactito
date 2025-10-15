@@ -11,7 +11,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
   const { isAuthenticated, isAdmin } = useAuthStore();
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && !isAdmin) {
