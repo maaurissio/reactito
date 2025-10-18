@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useAuthStore, useCartStore } from '../../store';
+import { useAuthStore } from '../../store';
 
 export const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { cantidadItems } = useCartStore();
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
@@ -43,14 +42,9 @@ export const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
-              <Link to="/carrito" className="nav-link position-relative">
-                <i className="fas fa-shopping-cart me-1"></i>
-                Carrito
-                {cantidadItems > 0 && (
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    {cantidadItems}
-                  </span>
-                )}
+              <Link to="/blog" className="nav-link">
+                <i className="fas fa-blog me-1"></i>
+                Blog
               </Link>
             </li>
 

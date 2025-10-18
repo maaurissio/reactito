@@ -10,6 +10,11 @@ import { Login } from './pages/auth/Login';
 import { Registro } from './pages/auth/Registro';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Nosotros } from './pages/info/Nosotros';
+import { Blog } from './pages/info/Blog';
+import { Perfil } from './pages/usuario/Perfil';
+import { Checkout } from './pages/usuario/Checkout';
+import { CompraExitosa } from './pages/usuario/CompraExitosa';
+import { Boleta } from './pages/usuario/Boleta';
 
 function App() {
   return (
@@ -48,6 +53,14 @@ function App() {
             </MainLayout>
           }
         />
+        <Route
+          path="/blog"
+          element={
+            <MainLayout>
+              <Blog />
+            </MainLayout>
+          }
+        />
 
         {/* Rutas de autenticación (solo para no autenticados) */}
         <Route
@@ -71,14 +84,50 @@ function App() {
           }
         />
 
-        {/* Rutas protegidas - Solo admin */}
+        {/* Rutas protegidas - Solo usuarios autenticados */}
+        <Route
+          path="/perfil"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Perfil />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Rutas de checkout y compra */}
+        <Route
+          path="/checkout"
+          element={
+            <MainLayout>
+              <Checkout />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/compra-exitosa"
+          element={
+            <MainLayout>
+              <CompraExitosa />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/boleta"
+          element={
+            <MainLayout>
+              <Boleta />
+            </MainLayout>
+          }
+        />
+
+        {/* Rutas protegidas - Solo admin (sin navbar) */}
         <Route
           path="/admin/dashboard"
           element={
             <ProtectedRoute requireAdmin>
-              <MainLayout>
-                <Dashboard />
-              </MainLayout>
+              <Dashboard />
             </ProtectedRoute>
           }
         />

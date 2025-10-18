@@ -1,0 +1,591 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { useCartStore } from '../../store/cartStore';
+import { useProductsStore } from '../../store/productsStore';
+import { crearPedido } from '../../services/pedidosService';
+import { Estado } from '../../types/models';
+
+interface RegionCiudades {
+  [key: string]: string[];
+}
+
+const ciudadesPorRegion: RegionCiudades = {
+  'arica-parinacota': ['Arica', 'Putre', 'Camarones'],
+  'tarapaca': ['Iquique', 'Alto Hospicio', 'Pozo Almonte', 'Pica'],
+  'antofagasta': ['Antofagasta', 'Calama', 'Tocopilla', 'Mejillones', 'Taltal'],
+  'atacama': ['Copiapó', 'Vallenar', 'Caldera', 'Chañaral', 'Diego de Almagro'],
+  'coquimbo': ['La Serena', 'Coquimbo', 'Ovalle', 'Illapel', 'Vicuña'],
+  'valparaiso': ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'San Antonio', 'Quillota', 'Los Andes', 'Limache'],
+  'metropolitana': ['Santiago', 'Puente Alto', 'Maipú', 'Las Condes', 'La Florida', 'Ñuñoa', 'Providencia', 'Vitacura', 'San Bernardo', 'Quilicura'],
+  'ohiggins': ['Rancagua', 'Machalí', 'Graneros', 'San Fernando', 'Rengo', 'Pichilemu'],
+  'maule': ['Talca', 'Curicó', 'Linares', 'Molina', 'Constitución', 'Cauquenes'],
+  'nuble': ['Chillán', 'San Carlos', 'Bulnes', 'Quirihue'],
+  'bio-bio': ['Concepción', 'Talcahuano', 'Los Ángeles', 'Chiguayante', 'San Pedro de la Paz', 'Coronel', 'Tomé'],
+  'araucania': ['Temuco', 'Padre Las Casas', 'Villarrica', 'Pucón', 'Angol', 'Victoria'],
+  'los-rios': ['Valdivia', 'La Unión', 'Río Bueno', 'Panguipulli'],
+  'los-lagos': ['Puerto Montt', 'Castro', 'Osorno', 'Puerto Varas', 'Ancud', 'Frutillar'],
+  'aysen': ['Coyhaique', 'Puerto Aysén', 'Chile Chico'],
+  'magallanes': ['Punta Arenas', 'Puerto Natales', 'Porvenir']
+};
+
+const COSTO_ENVIO = 5000;
+const ENVIO_GRATIS_MINIMO = 50000;
+
+export const Checkout = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthStore();
+  const { items, total, limpiarCarrito } = useCartStore();
+  const { actualizarStock } = useProductsStore();
+  
+  const [paso, setPaso] = useState<'tipo' | 'formulario'>('tipo');
+  
+  // Datos del formulario
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
+  const [region, setRegion] = useState('');
+  const [ciudad, setCiudad] = useState('');
+  const [codigoPostal, setCodigoPostal] = useState('');
+  const [notas, setNotas] = useState('');
+  
+  const [procesando, setProcesando] = useState(false);
+  const [ciudadesDisponibles, setCiudadesDisponibles] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Verificar si hay items en el carrito
+    if (items.length === 0) {
+      navigate('/catalogo');
+      return;
+    }
+
+    // Pre-llenar datos si el usuario está autenticado
+    if (isAuthenticated && user) {
+      const nombres = user.nombre?.split(' ') || [];
+      setNombre(nombres[0] || '');
+      setApellido(nombres.slice(1).join(' ') || '');
+      setEmail(user.email || '');
+      setTelefono(user.telefono || '');
+    }
+  }, [items.length, navigate, isAuthenticated, user]);
+
+  useEffect(() => {
+    // Actualizar ciudades cuando cambia la región
+    if (region && ciudadesPorRegion[region]) {
+      setCiudadesDisponibles(ciudadesPorRegion[region]);
+      setCiudad(''); // Resetear ciudad al cambiar región
+    } else {
+      setCiudadesDisponibles([]);
+    }
+  }, [region]);
+
+  const calcularCostoEnvio = () => {
+    return total >= ENVIO_GRATIS_MINIMO ? 0 : COSTO_ENVIO;
+  };
+
+  const calcularTotal = () => {
+    return total + calcularCostoEnvio();
+  };
+
+  const seleccionarTipo = (_tipo: 'user' | 'guest' | 'register') => {
+    setPaso('formulario');
+  };
+
+  const validarFormulario = (): boolean => {
+    if (!nombre || !apellido || !email || !telefono) {
+      alert('Por favor completa todos los campos obligatorios de contacto');
+      return false;
+    }
+
+    if (!direccion || !region || !ciudad) {
+      alert('Por favor completa todos los campos obligatorios de envío');
+      return false;
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Por favor ingresa un email válido');
+      return false;
+    }
+
+    // Validar teléfono (9 dígitos)
+    if (telefono.length !== 9 || !/^\d{9}$/.test(telefono)) {
+      alert('El teléfono debe tener exactamente 9 dígitos');
+      return false;
+    }
+
+    return true;
+  };
+
+  const procesarPedido = async () => {
+    console.log('=== INICIANDO PROCESO DE PEDIDO ===');
+    
+    if (!validarFormulario()) {
+      console.log('Validación del formulario falló');
+      return;
+    }
+
+    console.log('Formulario válido, procesando...');
+    setProcesando(true);
+
+    try {
+      // Simular delay para UX
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Crear pedido
+      const itemsPedido = items.map(item => ({
+        id: item.producto.id,
+        nombre: item.producto.nombre,
+        precio: item.producto.precio,
+        cantidad: item.cantidad,
+        subtotal: item.subtotal
+      }));
+
+      console.log('Items del pedido:', itemsPedido);
+
+      const costoEnvio = calcularCostoEnvio();
+      const totalFinal = calcularTotal();
+
+      console.log('Costos - Envío:', costoEnvio, 'Total:', totalFinal);
+
+      const resultado = crearPedido(
+        user ? { ...user, password: '', isActivo: Estado.activo } : null,
+        {
+          nombre,
+          apellido,
+          email,
+          telefono
+        },
+        {
+          direccion,
+          ciudad,
+          region,
+          codigoPostal,
+          notas,
+          costo: costoEnvio,
+          esGratis: costoEnvio === 0
+        },
+        itemsPedido,
+        total,
+        costoEnvio,
+        totalFinal
+      );
+
+      console.log('Resultado de crearPedido:', resultado);
+
+      if (resultado.success && resultado.pedido) {
+        console.log('Pedido creado exitosamente:', resultado.pedido.id);
+        
+        // Actualizar stock de productos
+        for (const item of items) {
+          const nuevoStock = Math.max(0, item.producto.stock - item.cantidad);
+          actualizarStock(item.producto.id, nuevoStock);
+          console.log(`Stock actualizado para ${item.producto.nombre}: ${nuevoStock}`);
+        }
+
+        // Guardar pedido para la página de confirmación
+        localStorage.setItem('ultimoPedido', JSON.stringify(resultado.pedido));
+        console.log('Pedido guardado en localStorage');
+
+        // Limpiar carrito
+        limpiarCarrito();
+        console.log('Carrito limpiado');
+
+        // Redirigir a página de éxito
+        console.log('Intentando navegar a /compra-exitosa...');
+        
+        // Usar setTimeout para asegurar que el navegador procesa la navegación
+        setTimeout(() => {
+          console.log('Ejecutando navigate...');
+          navigate('/compra-exitosa', { replace: true });
+          console.log('Navigate ejecutado');
+        }, 100);
+      } else {
+        console.error('Error: resultado.success es false o no hay pedido');
+        alert('Error al procesar el pedido. Por favor intenta nuevamente.');
+        setProcesando(false);
+      }
+    } catch (error) {
+      console.error('Error procesando pedido:', error);
+      alert('Error al procesar el pedido. Por favor intenta nuevamente.');
+      setProcesando(false);
+    }
+  };
+
+  const volver = () => {
+    setPaso('tipo');
+  };
+
+  return (
+    <div className="checkout-page bg-light">
+      {/* Header */}
+      <section className="bg-success text-white py-4">
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-md-8">
+              <h2 className="mb-0" style={{ fontFamily: "'Playfair Display', serif" }}>
+                <i className="fas fa-shopping-cart me-3"></i>Finalizar Compra
+              </h2>
+              <p className="mb-0 mt-2">Completa tu pedido de productos frescos y naturales</p>
+            </div>
+            <div className="col-md-4 text-end">
+              <div className="d-flex align-items-center justify-content-end">
+                <i className="fas fa-lock me-2"></i>
+                <span className="small">Compra segura</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contenido */}
+      <section className="py-5">
+        <div className="container">
+          <div className="row">
+            {/* Columna izquierda - Formularios */}
+            <div className="col-lg-8">
+              
+              {/* Paso 1: Tipo de compra */}
+              {paso === 'tipo' && (
+                <div className="card shadow-sm mb-4">
+                  <div className="card-header bg-light">
+                    <h5 className="mb-0">
+                      <i className="fas fa-user-circle me-2 text-success"></i>
+                      Paso 1: ¿Cómo deseas realizar tu compra?
+                    </h5>
+                  </div>
+                  <div className="card-body">
+                    
+                    {/* Usuario logueado */}
+                    {isAuthenticated ? (
+                      <div>
+                        <div className="card border-success bg-light">
+                          <div className="card-body p-3">
+                            <div className="d-flex align-items-center">
+                              <i className="fas fa-check-circle text-success me-3 fs-5"></i>
+                              <div>
+                                <h6 className="mb-1 text-success">¡Perfecto! Ya tienes una cuenta</h6>
+                                <p className="mb-0 small text-muted">
+                                  Continúa con tus datos guardados: <span className="fw-bold text-dark">{user?.email}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button className="btn btn-success mt-3" onClick={() => seleccionarTipo('user')}>
+                          <i className="fas fa-arrow-right me-2"></i>Continuar como usuario registrado
+                        </button>
+                      </div>
+                    ) : (
+                      // Usuario no logueado
+                      <div>
+                        <div className="row g-3">
+                          <div className="col-md-6">
+                            <div 
+                              className="card h-100 border-2 checkout-option" 
+                              onClick={() => seleccionarTipo('guest')}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="card-body text-center">
+                                <i className="fas fa-user-clock display-4 text-success mb-3"></i>
+                                <h6 className="card-title">Comprar como invitado</h6>
+                                <p className="card-text small text-muted">
+                                  Realiza tu compra rápidamente sin crear una cuenta
+                                </p>
+                                <ul className="list-unstyled small text-muted">
+                                  <li><i className="fas fa-check text-success me-2"></i>Proceso rápido</li>
+                                  <li><i className="fas fa-check text-success me-2"></i>Sin registro necesario</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="col-md-6">
+                            <div 
+                              className="card h-100 border-2 checkout-option" 
+                              onClick={() => seleccionarTipo('register')}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="card-body text-center">
+                                <i className="fas fa-user-plus display-4 text-success mb-3"></i>
+                                <h6 className="card-title">Crear cuenta nueva</h6>
+                                <p className="card-text small text-muted">
+                                  Crea una cuenta para guardar tus datos y pedidos
+                                </p>
+                                <ul className="list-unstyled small text-muted">
+                                  <li><i className="fas fa-check text-success me-2"></i>Historial de pedidos</li>
+                                  <li><i className="fas fa-check text-success me-2"></i>Datos guardados</li>
+                                  <li><i className="fas fa-check text-success me-2"></i>Ofertas exclusivas</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 text-center">
+                          <p className="small text-muted">
+                            ¿Ya tienes cuenta?{' '}
+                            <a href="/login" className="text-success text-decoration-none">
+                              <i className="fas fa-sign-in-alt me-1"></i>Inicia sesión aquí
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Paso 2: Formulario de contacto y envío */}
+              {paso === 'formulario' && (
+                <div className="card shadow-sm mb-4">
+                  <div className="card-header bg-light">
+                    <h5 className="mb-0">
+                      <i className="fas fa-address-card me-2 text-success"></i>
+                      Paso 2: Datos de contacto y envío
+                    </h5>
+                  </div>
+                  <div className="card-body">
+                    <form onSubmit={(e) => { e.preventDefault(); procesarPedido(); }}>
+                      <div className="row g-3">
+                        {/* Datos personales */}
+                        <div className="col-12">
+                          <h6 className="text-success mb-3">
+                            <i className="fas fa-user me-2"></i>Información personal
+                          </h6>
+                        </div>
+                        <div className="col-md-6">
+                          <label htmlFor="nombre" className="form-label">Nombre *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="nombre"
+                            value={nombre}
+                            onChange={(e) => setNombre(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
+                            required
+                          />
+                        </div>
+                        <div className="col-md-6">
+                          <label htmlFor="apellido" className="form-label">Apellido *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="apellido"
+                            value={apellido}
+                            onChange={(e) => setApellido(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
+                            required
+                          />
+                        </div>
+                        <div className="col-md-6">
+                          <label htmlFor="email" className="form-label">Correo electrónico *</label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="col-md-6">
+                          <label htmlFor="telefono" className="form-label">Teléfono *</label>
+                          <div className="input-group">
+                            <span className="input-group-text bg-success text-white">+56</span>
+                            <input
+                              type="tel"
+                              className="form-control"
+                              id="telefono"
+                              placeholder="912345678"
+                              maxLength={9}
+                              value={telefono}
+                              onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                              required
+                            />
+                          </div>
+                          <small className="form-text text-muted">Ingresa 9 dígitos (ej: 912345678)</small>
+                        </div>
+
+                        {/* Datos de envío */}
+                        <div className="col-12 mt-4">
+                          <h6 className="text-success mb-3">
+                            <i className="fas fa-truck me-2"></i>Dirección de envío
+                          </h6>
+                        </div>
+                        <div className="col-12">
+                          <label htmlFor="direccion" className="form-label">Dirección completa *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="direccion"
+                            placeholder="Calle, número, piso, departamento"
+                            value={direccion}
+                            onChange={(e) => setDireccion(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="col-md-4">
+                          <label htmlFor="region" className="form-label">Región *</label>
+                          <select
+                            className="form-select"
+                            id="region"
+                            value={region}
+                            onChange={(e) => setRegion(e.target.value)}
+                            required
+                          >
+                            <option value="">Seleccionar región</option>
+                            <option value="arica-parinacota">Arica y Parinacota</option>
+                            <option value="tarapaca">Tarapacá</option>
+                            <option value="antofagasta">Antofagasta</option>
+                            <option value="atacama">Atacama</option>
+                            <option value="coquimbo">Coquimbo</option>
+                            <option value="valparaiso">Valparaíso</option>
+                            <option value="metropolitana">Región Metropolitana</option>
+                            <option value="ohiggins">O'Higgins</option>
+                            <option value="maule">Maule</option>
+                            <option value="nuble">Ñuble</option>
+                            <option value="bio-bio">Biobío</option>
+                            <option value="araucania">La Araucanía</option>
+                            <option value="los-rios">Los Ríos</option>
+                            <option value="los-lagos">Los Lagos</option>
+                            <option value="aysen">Aysén</option>
+                            <option value="magallanes">Magallanes</option>
+                          </select>
+                        </div>
+                        <div className="col-md-4">
+                          <label htmlFor="ciudad" className="form-label">Ciudad *</label>
+                          <select
+                            className="form-select"
+                            id="ciudad"
+                            value={ciudad}
+                            onChange={(e) => setCiudad(e.target.value)}
+                            disabled={!region}
+                            required
+                          >
+                            <option value="">
+                              {region ? 'Selecciona tu ciudad' : 'Primero selecciona una región'}
+                            </option>
+                            {ciudadesDisponibles.map(c => (
+                              <option key={c} value={c.toLowerCase().replace(/\s+/g, '-')}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-md-4">
+                          <label htmlFor="codigoPostal" className="form-label">Código postal</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="codigoPostal"
+                            value={codigoPostal}
+                            onChange={(e) => setCodigoPostal(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Notas adicionales */}
+                        <div className="col-12">
+                          <label htmlFor="notas" className="form-label">Notas de entrega (opcional)</label>
+                          <textarea
+                            className="form-control"
+                            id="notas"
+                            rows={3}
+                            placeholder="Instrucciones especiales para la entrega..."
+                            value={notas}
+                            onChange={(e) => setNotas(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <button type="submit" className="btn btn-success btn-lg" disabled={procesando}>
+                          {procesando ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin me-2"></i>Procesando pedido...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-credit-card me-2"></i>Continuar al pago
+                            </>
+                          )}
+                        </button>
+                        <button type="button" className="btn btn-outline-secondary btn-lg ms-2" onClick={volver}>
+                          <i className="fas fa-arrow-left me-2"></i>Volver
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Columna derecha - Resumen del pedido */}
+            <div className="col-lg-4">
+              <div className="card shadow-sm sticky-top" style={{ top: '20px' }}>
+                <div className="card-header bg-success text-white">
+                  <h5 className="mb-0">
+                    <i className="fas fa-receipt me-2"></i>Resumen del pedido
+                  </h5>
+                </div>
+                <div className="card-body">
+                  {items.map(item => (
+                    <div key={item.id} className="d-flex justify-content-between align-items-center py-2 border-bottom">
+                      <div className="flex-grow-1">
+                        <h6 className="mb-0 small">{item.producto.nombre}</h6>
+                        <small className="text-muted">
+                          {item.cantidad} x ${item.producto.precio.toLocaleString('es-CL')}
+                        </small>
+                      </div>
+                      <div className="text-end">
+                        <strong className="small">${item.subtotal.toLocaleString('es-CL')}</strong>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Envío */}
+                  <div className="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div className="flex-grow-1">
+                      <h6 className={`mb-0 small ${calcularCostoEnvio() === 0 ? 'text-success' : 'text-dark'}`}>
+                        <i className="fas fa-truck me-1"></i>Envío
+                      </h6>
+                      <small className="text-muted">
+                        Gratis desde ${ENVIO_GRATIS_MINIMO.toLocaleString('es-CL')}
+                      </small>
+                    </div>
+                    <div className="text-end">
+                      {calcularCostoEnvio() === 0 ? (
+                        <strong className="small text-success">Gratis</strong>
+                      ) : (
+                        <strong className="small">${calcularCostoEnvio().toLocaleString('es-CL')}</strong>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="card-footer bg-light">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <strong className="text-success">Total a pagar:</strong>
+                    <strong className="fs-5 text-success">${calcularTotal().toLocaleString('es-CL')}</strong>
+                  </div>
+                  <small className="text-muted">
+                    <i className="fas fa-truck me-1"></i>Envío incluido
+                  </small>
+                </div>
+              </div>
+
+              {/* Información de seguridad */}
+              <div className="card shadow-sm mt-3">
+                <div className="card-body text-center">
+                  <i className="fas fa-shield-alt text-success fs-2 mb-2"></i>
+                  <h6 className="text-success">Compra segura</h6>
+                  <p className="small text-muted mb-0">
+                    Tus datos están protegidos
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};

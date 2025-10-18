@@ -24,6 +24,7 @@ interface ProductsState {
   obtenerProducto: (id: number) => IProducto | undefined;
   agregarProducto: (producto: Omit<IProducto, 'id' | 'codigo'>) => void;
   actualizarProducto: (id: number, cambios: Partial<IProducto>) => void;
+  actualizarStock: (id: number, nuevoStock: number) => void;
   eliminarProducto: (id: number) => void;
   limpiarFiltros: () => void;
 }
@@ -96,6 +97,14 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   actualizarProducto: (id: number, cambios: Partial<IProducto>) => {
     updateProductService(id, cambios);
     get().cargarProductos();
+  },
+
+  actualizarStock: (id: number, nuevoStock: number) => {
+    const producto = obtenerProductoPorId(id);
+    if (producto) {
+      updateProductService(id, { ...producto, stock: nuevoStock });
+      get().cargarProductos();
+    }
   },
 
   eliminarProducto: (id: number) => {

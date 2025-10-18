@@ -61,6 +61,11 @@ export function actualizarDatosUsuarios(
 // GESTIÓN DE USUARIOS
 // ============================================
 
+export function obtenerTodosLosUsuarios(): IUsuario[] {
+  const datos = obtenerDatosUsuarios();
+  return datos.usuarios;
+}
+
 export function obtenerUsuarioPorId(id: number): IUsuario | undefined {
   const datos = obtenerDatosUsuarios();
   return datos.usuarios.find((u) => u.id === id);

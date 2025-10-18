@@ -92,21 +92,16 @@ export const Catalogo = () => {
       <section 
         className="hero-section position-relative overflow-hidden" 
         style={{
-          background: 'linear-gradient(135deg, rgba(46, 139, 87, 0.9), rgba(34, 139, 34, 0.8)), url(\'/img/manzana.webp\')',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          minHeight: '300px',
-          display: 'flex',
-          alignItems: 'center'
+          backgroundImage: 'url(\'/img/manzana.webp\')'
         }}
       >
         <div className="container text-center text-white">
           <div className="row justify-content-center">
             <div className="col-lg-8">
-              <h1 className="display-4 fw-bold mb-3" style={{ fontFamily: "'Playfair Display', serif", textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+              <h1 className="display-4 fw-bold mb-3 text-white" style={{ fontFamily: "'Playfair Display', serif", textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
                 Productos Frescos
               </h1>
-              <p className="lead mb-4" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+              <p className="lead mb-4 text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
                 Descubre la frescura y calidad de nuestros productos orgánicos, directamente del huerto a tu mesa
               </p>
               <span className="badge bg-white text-success rounded-pill px-4 py-2 fs-6 fw-medium">
