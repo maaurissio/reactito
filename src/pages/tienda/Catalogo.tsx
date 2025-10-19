@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useProductsStore, useCartStore } from '../../store';
 import type { IProducto } from '../../types';
+import { Estado } from '../../types/models';
 
 export const Catalogo = () => {
   const {
@@ -14,6 +15,8 @@ export const Catalogo = () => {
   const [categoriaActiva, setCategoriaActiva] = useState<string>('todos');
   const [productosFiltrados, setProductosFiltrados] = useState<IProducto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [productoAgregado, setProductoAgregado] = useState<IProducto | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -31,6 +34,9 @@ export const Catalogo = () => {
 
   const aplicarFiltros = () => {
     let filtrados = [...productos];
+
+    // Filtrar solo productos activos
+    filtrados = filtrados.filter(producto => producto.isActivo === Estado.activo);
 
     // Filtrar por categoría
     if (categoriaActiva && categoriaActiva !== 'todos') {
@@ -62,8 +68,13 @@ export const Catalogo = () => {
 
   const handleAddToCart = (producto: IProducto) => {
     agregarItem(producto, 1);
-    // Toast o notificación
-    alert(`${producto.nombre} agregado al carrito`);
+    setProductoAgregado(producto);
+    setShowModal(true);
+    
+    // Auto-cerrar la notificación después de 3 segundos
+    setTimeout(() => {
+      setShowModal(false);
+    }, 3000);
   };
 
   const formatearPrecio = (precio: number) => {
@@ -253,6 +264,57 @@ export const Catalogo = () => {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification - Superior Derecha */}
+      {showModal && productoAgregado && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            minWidth: '300px',
+            maxWidth: '400px',
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+        >
+          <div className="card shadow-lg border-0">
+            <div className="card-body p-3">
+              <div className="d-flex align-items-start">
+                <div className="me-3">
+                  <i className="fas fa-check-circle text-success" style={{ fontSize: '2rem' }}></i>
+                </div>
+                <div className="flex-grow-1">
+                  <h6 className="mb-1 fw-bold">¡Agregado al carrito!</h6>
+                  <p className="mb-0 text-muted small">
+                    {productoAgregado.nombre}
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close btn-sm" 
+                  onClick={() => setShowModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Animación CSS */}
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
 import { useProductsStore } from '../../store/productsStore';
 import { crearPedido } from '../../services/pedidosService';
+import { calcularCostoEnvio } from '../../services/shippingConfigService';
 import { Estado } from '../../types/models';
 
 interface RegionCiudades {
@@ -29,9 +30,6 @@ const ciudadesPorRegion: RegionCiudades = {
   'magallanes': ['Punta Arenas', 'Puerto Natales', 'Porvenir']
 };
 
-const COSTO_ENVIO = 5000;
-const ENVIO_GRATIS_MINIMO = 50000;
-
 export const Checkout = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
@@ -54,6 +52,16 @@ export const Checkout = () => {
   const [procesando, setProcesando] = useState(false);
   const [ciudadesDisponibles, setCiudadesDisponibles] = useState<string[]>([]);
 
+  // Estados para notificación toast
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+  // Scroll al inicio cuando se monta el componente
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     // Verificar si hay items en el carrito
     if (items.length === 0) {
@@ -65,9 +73,10 @@ export const Checkout = () => {
     if (isAuthenticated && user) {
       const nombres = user.nombre?.split(' ') || [];
       setNombre(nombres[0] || '');
-      setApellido(nombres.slice(1).join(' ') || '');
+      setApellido(user.apellido || nombres.slice(1).join(' ') || '');
       setEmail(user.email || '');
       setTelefono(user.telefono || '');
+      setDireccion(user.direccion || '');
     }
   }, [items.length, navigate, isAuthenticated, user]);
 
@@ -81,12 +90,22 @@ export const Checkout = () => {
     }
   }, [region]);
 
-  const calcularCostoEnvio = () => {
-    return total >= ENVIO_GRATIS_MINIMO ? 0 : COSTO_ENVIO;
+  const calcularCostoEnvioActual = () => {
+    return calcularCostoEnvio(total);
   };
 
   const calcularTotal = () => {
-    return total + calcularCostoEnvio();
+    return total + calcularCostoEnvioActual();
+  };
+
+  // Función para mostrar notificación toast
+  const mostrarToast = (mensaje: string, tipo: 'success' | 'error' = 'success') => {
+    setToastMessage(mensaje);
+    setToastType(tipo);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
   };
 
   const seleccionarTipo = (_tipo: 'user' | 'guest' | 'register') => {
@@ -95,25 +114,25 @@ export const Checkout = () => {
 
   const validarFormulario = (): boolean => {
     if (!nombre || !apellido || !email || !telefono) {
-      alert('Por favor completa todos los campos obligatorios de contacto');
+      mostrarToast('Por favor completa todos los campos obligatorios de contacto', 'error');
       return false;
     }
 
     if (!direccion || !region || !ciudad) {
-      alert('Por favor completa todos los campos obligatorios de envío');
+      mostrarToast('Por favor completa todos los campos obligatorios de envío', 'error');
       return false;
     }
 
     // Validar email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      alert('Por favor ingresa un email válido');
+      mostrarToast('Por favor ingresa un email válido', 'error');
       return false;
     }
 
     // Validar teléfono (9 dígitos)
     if (telefono.length !== 9 || !/^\d{9}$/.test(telefono)) {
-      alert('El teléfono debe tener exactamente 9 dígitos');
+      mostrarToast('El teléfono debe tener exactamente 9 dígitos', 'error');
       return false;
     }
 
@@ -146,7 +165,7 @@ export const Checkout = () => {
 
       console.log('Items del pedido:', itemsPedido);
 
-      const costoEnvio = calcularCostoEnvio();
+      const costoEnvio = calcularCostoEnvioActual();
       const totalFinal = calcularTotal();
 
       console.log('Costos - Envío:', costoEnvio, 'Total:', totalFinal);
@@ -205,12 +224,12 @@ export const Checkout = () => {
         }, 100);
       } else {
         console.error('Error: resultado.success es false o no hay pedido');
-        alert('Error al procesar el pedido. Por favor intenta nuevamente.');
+        mostrarToast('Error al procesar el pedido. Por favor intenta nuevamente.', 'error');
         setProcesando(false);
       }
     } catch (error) {
       console.error('Error procesando pedido:', error);
-      alert('Error al procesar el pedido. Por favor intenta nuevamente.');
+      mostrarToast('Error al procesar el pedido. Por favor intenta nuevamente.', 'error');
       setProcesando(false);
     }
   };
@@ -220,13 +239,13 @@ export const Checkout = () => {
   };
 
   return (
-    <div className="checkout-page bg-light">
+    <div className="checkout-page bg-light" style={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden' }}>
       {/* Header */}
       <section className="bg-success text-white py-4">
         <div className="container">
           <div className="row align-items-center">
             <div className="col-md-8">
-              <h2 className="mb-0" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="mb-0" style={{ fontFamily: "'Playfair Display', serif", color: '#ffffff' }}>
                 <i className="fas fa-shopping-cart me-3"></i>Finalizar Compra
               </h2>
               <p className="mb-0 mt-2">Completa tu pedido de productos frescos y naturales</p>
@@ -242,7 +261,7 @@ export const Checkout = () => {
       </section>
 
       {/* Contenido */}
-      <section className="py-5">
+      <section className="py-3" style={{ maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
         <div className="container">
           <div className="row">
             {/* Columna izquierda - Formularios */}
@@ -509,7 +528,12 @@ export const Checkout = () => {
                             </>
                           )}
                         </button>
-                        <button type="button" className="btn btn-outline-secondary btn-lg ms-2" onClick={volver}>
+                        <button 
+                          type="button" 
+                          className="btn btn-outline-secondary btn-lg ms-2" 
+                          onClick={volver}
+                          disabled={procesando}
+                        >
                           <i className="fas fa-arrow-left me-2"></i>Volver
                         </button>
                       </div>
@@ -545,18 +569,18 @@ export const Checkout = () => {
                   {/* Envío */}
                   <div className="d-flex justify-content-between align-items-center py-2 border-bottom">
                     <div className="flex-grow-1">
-                      <h6 className={`mb-0 small ${calcularCostoEnvio() === 0 ? 'text-success' : 'text-dark'}`}>
+                      <h6 className={`mb-0 small ${calcularCostoEnvioActual() === 0 ? 'text-success' : 'text-dark'}`}>
                         <i className="fas fa-truck me-1"></i>Envío
                       </h6>
                       <small className="text-muted">
-                        Gratis desde ${ENVIO_GRATIS_MINIMO.toLocaleString('es-CL')}
+                        {calcularCostoEnvioActual() === 0 ? 'Envío gratis aplicado' : 'Se aplica costo de envío'}
                       </small>
                     </div>
                     <div className="text-end">
-                      {calcularCostoEnvio() === 0 ? (
+                      {calcularCostoEnvioActual() === 0 ? (
                         <strong className="small text-success">Gratis</strong>
                       ) : (
-                        <strong className="small">${calcularCostoEnvio().toLocaleString('es-CL')}</strong>
+                        <strong className="small">${calcularCostoEnvioActual().toLocaleString('es-CL')}</strong>
                       )}
                     </div>
                   </div>
@@ -586,6 +610,48 @@ export const Checkout = () => {
           </div>
         </div>
       </section>
+
+      {/* Notificación Toast */}
+      {showToast && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: '20px', 
+            right: '20px', 
+            zIndex: 9999, 
+            minWidth: '300px', 
+            maxWidth: '400px', 
+            animation: 'slideInRight 0.3s ease-out' 
+          }}
+        >
+          <div className={`card shadow-lg border-0 border-start border-${toastType === 'error' ? 'danger' : 'success'} border-4`}>
+            <div className="card-body p-3 d-flex align-items-center">
+              <i className={`fas fa-${toastType === 'error' ? 'exclamation-circle text-danger' : 'check-circle text-success'} me-3`} style={{ fontSize: '2rem' }}></i>
+              <div className="flex-grow-1">
+                <h6 className="mb-0">{toastMessage}</h6>
+              </div>
+              <button 
+                className="btn-close ms-2" 
+                onClick={() => setShowToast(false)}
+                aria-label="Cerrar"
+              ></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

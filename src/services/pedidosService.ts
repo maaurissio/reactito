@@ -4,6 +4,7 @@ export interface IPedido {
   id: string;
   fecha: string;
   estado: 'confirmado' | 'en-preparacion' | 'enviado' | 'entregado' | 'cancelado';
+  leido?: boolean; // Flag para marcar si el admin ya vio el pedido
   usuario?: IUsuario;
   contacto: {
     nombre: string;
@@ -96,6 +97,7 @@ export function crearPedido(
       id: generarIdPedido(),
       fecha: new Date().toISOString(),
       estado: 'confirmado',
+      leido: false, // Nuevo pedido no leído por el admin
       usuario: usuario || undefined,
       contacto,
       envio,
@@ -135,6 +137,32 @@ export function obtenerPedidosUsuario(email: string): IPedido[] {
 export function obtenerTodosLosPedidos(): IPedido[] {
   const datos = obtenerDatosPedidos();
   return datos.pedidos;
+}
+
+export function marcarPedidosComoLeidos(ids: string[]): { success: boolean; mensaje: string } {
+  try {
+    const datos = obtenerDatosPedidos();
+    
+    ids.forEach(id => {
+      const pedido = datos.pedidos.find(p => p.id === id);
+      if (pedido) {
+        pedido.leido = true;
+      }
+    });
+    
+    guardarDatosPedidos(datos);
+    
+    return {
+      success: true,
+      mensaje: 'Pedidos marcados como leídos'
+    };
+  } catch (error) {
+    console.error('Error al marcar pedidos como leídos:', error);
+    return {
+      success: false,
+      mensaje: 'Error al marcar pedidos como leídos'
+    };
+  }
 }
 
 export function actualizarEstadoPedido(

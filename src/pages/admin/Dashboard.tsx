@@ -1,34 +1,109 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useProductsStore } from '../../store/productsStore';
 import { Navigate } from 'react-router-dom';
-import { obtenerTodosLosUsuarios } from '../../services/usuariosService';
+import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService } from '../../services/usuariosService';
+import { obtenerTodosLosPedidos, actualizarEstadoPedido, marcarPedidosComoLeidos, type IPedido } from '../../services/pedidosService';
+import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/shippingConfigService';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import type { IProducto, IUsuario } from '../../types';
+import { Estado } from '../../types/models';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export const Dashboard = () => {
   const { isAdmin, user, logout } = useAuthStore();
-  const { productos } = useProductsStore();
+  const { productos, cargarProductos, actualizarProducto, actualizarStock } = useProductsStore();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [pedidos, setPedidos] = useState<IPedido[]>([]);
+  
+  // Estados para modales de productos
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = useState<IProducto | null>(null);
+  const [nuevoStock, setNuevoStock] = useState(0);
+  
+  // Estados para modales de usuarios
+  const [showUserViewModal, setShowUserViewModal] = useState(false);
+  const [showUserEditModal, setShowUserEditModal] = useState(false);
+  const [showUserDeleteModal, setShowUserDeleteModal] = useState(false);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<IUsuario | null>(null);
+  const [formEditUser, setFormEditUser] = useState({
+    nombre: '',
+    apellido: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    rol: ''
+  });
+
+  // Estados para filtros
+  const [filtroEstadoPedido, setFiltroEstadoPedido] = useState('');
+
+  // Estados para modales de pedidos
+  const [showPedidoViewModal, setShowPedidoViewModal] = useState(false);
+  const [showPedidoEditModal, setShowPedidoEditModal] = useState(false);
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState<IPedido | null>(null);
+  const [nuevoEstadoPedido, setNuevoEstadoPedido] = useState<IPedido['estado']>('confirmado');
+
+  // Estados para configuración de envío
+  const [costoEnvioBase, setCostoEnvioBase] = useState(5000);
+  const [envioGratisDesde, setEnvioGratisDesde] = useState(50000);
+  const [envioGratisHabilitado, setEnvioGratisHabilitado] = useState(true);
+
+  // Estados para notificación toast
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Estado para notificaciones de pedidos nuevos
+  const [pedidosNuevos, setPedidosNuevos] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  
+  // Estados para el formulario de edición de productos
+  const [formEdit, setFormEdit] = useState({
+    nombre: '',
+    descripcion: '',
+    precio: 0,
+    stock: 0,
+    categoria: '',
+    imagen: ''
+  });
 
   // Estadísticas dinámicas
   const totalProductos = productos.length;
   const totalUsuarios = usuarios.length;
-  const totalVentas = 0; // TODO: Implementar cuando haya sistema de ventas
-  const totalPedidos = 0; // TODO: Implementar cuando haya sistema de pedidos
+  const totalPedidos = pedidos.length;
+  const totalVentas = pedidos.reduce((sum, p) => sum + p.total, 0);
 
   // Stock total de todos los productos
   const stockTotal = productos.reduce((sum, p) => sum + p.stock, 0);
 
   useEffect(() => {
+    // Cargar productos
+    cargarProductos();
+
     // Cargar usuarios
     const users = obtenerTodosLosUsuarios();
     setUsuarios(users);
-  }, []);
+
+    // Cargar pedidos
+    const orders = obtenerTodosLosPedidos();
+    setPedidos(orders);
+
+    // Contar pedidos nuevos (no leídos)
+    const nuevos = orders.filter(p => !p.leido).length;
+    setPedidosNuevos(nuevos);
+
+    // Cargar configuración de envío
+    const config = obtenerConfiguracionEnvio();
+    setCostoEnvioBase(config.costoEnvioBase);
+    setEnvioGratisDesde(config.envioGratisDesde);
+    setEnvioGratisHabilitado(config.envioGratisHabilitado);
+  }, [cargarProductos]);
 
   // Redirigir si no es admin
   if (!isAdmin) {
@@ -245,6 +320,207 @@ export const Dashboard = () => {
     </>
   );
 
+  // Funciones para gestión de productos
+  const toggleEstadoProducto = (producto: IProducto) => {
+    const nuevoEstado = producto.isActivo === Estado.activo ? Estado.inactivo : Estado.activo;
+    actualizarProducto(producto.id, { isActivo: nuevoEstado });
+  };
+
+  const abrirModalEditar = (producto: IProducto) => {
+    setProductoSeleccionado(producto);
+    setFormEdit({
+      nombre: producto.nombre,
+      descripcion: producto.descripcion,
+      precio: producto.precio,
+      stock: producto.stock,
+      categoria: producto.categoria,
+      imagen: producto.imagen
+    });
+    setShowEditModal(true);
+  };
+
+  const guardarEdicion = () => {
+    if (productoSeleccionado) {
+      actualizarProducto(productoSeleccionado.id, {
+        nombre: formEdit.nombre,
+        descripcion: formEdit.descripcion,
+        precio: formEdit.precio,
+        stock: formEdit.stock,
+        categoria: formEdit.categoria,
+        imagen: formEdit.imagen
+      });
+      setShowEditModal(false);
+      setProductoSeleccionado(null);
+    }
+  };
+
+  const abrirModalStock = (producto: IProducto) => {
+    setProductoSeleccionado(producto);
+    setNuevoStock(producto.stock);
+    setShowStockModal(true);
+  };
+
+  const guardarStock = () => {
+    if (productoSeleccionado) {
+      actualizarStock(productoSeleccionado.id, nuevoStock);
+      setShowStockModal(false);
+      setProductoSeleccionado(null);
+    }
+  };
+
+  // Funciones para gestión de usuarios
+  const abrirModalVerUsuario = (usuario: IUsuario) => {
+    setUsuarioSeleccionado(usuario);
+    setShowUserViewModal(true);
+  };
+
+  const abrirModalEditarUsuario = (usuario: IUsuario) => {
+    setUsuarioSeleccionado(usuario);
+    setFormEditUser({
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      email: usuario.email,
+      telefono: usuario.telefono || '',
+      direccion: usuario.direccion || '',
+      rol: usuario.rol
+    });
+    setShowUserEditModal(true);
+  };
+
+  const guardarEdicionUsuario = () => {
+    if (usuarioSeleccionado) {
+      actualizarUsuarioService(usuarioSeleccionado.id, {
+        nombre: formEditUser.nombre,
+        apellido: formEditUser.apellido,
+        email: formEditUser.email,
+        telefono: formEditUser.telefono,
+        direccion: formEditUser.direccion,
+        rol: formEditUser.rol as any
+      });
+      setShowUserEditModal(false);
+      setUsuarioSeleccionado(null);
+      // Recargar lista de usuarios
+      setUsuarios(obtenerTodosLosUsuarios());
+    }
+  };
+
+  const abrirModalEliminarUsuario = (usuario: IUsuario) => {
+    // No permitir que un usuario se desactive a sí mismo
+    if (user && usuario.id === user.id) {
+      alert('No puedes desactivar tu propia cuenta.');
+      return;
+    }
+    setUsuarioSeleccionado(usuario);
+    setShowUserDeleteModal(true);
+  };
+
+  const confirmarEliminarUsuario = () => {
+    if (usuarioSeleccionado) {
+      actualizarUsuarioService(usuarioSeleccionado.id, { isActivo: Estado.inactivo });
+      setShowUserDeleteModal(false);
+      setUsuarioSeleccionado(null);
+      // Recargar lista de usuarios
+      setUsuarios(obtenerTodosLosUsuarios());
+    }
+  };
+
+  const activarUsuario = (usuario: IUsuario) => {
+    actualizarUsuarioService(usuario.id, { isActivo: Estado.activo });
+    // Recargar lista de usuarios
+    setUsuarios(obtenerTodosLosUsuarios());
+  };
+
+  // Función para mostrar notificación toast
+  const mostrarToast = (mensaje: string) => {
+    setToastMessage(mensaje);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
+
+  // Función para alternar el dropdown de notificaciones
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  // Función para marcar todas las notificaciones como leídas
+  const marcarTodasComoLeidas = () => {
+    const pedidosNoLeidos = pedidos.filter(p => !p.leido);
+    if (pedidosNoLeidos.length > 0) {
+      const ids = pedidosNoLeidos.map(p => p.id);
+      marcarPedidosComoLeidos(ids);
+      
+      // Actualizar estado
+      const pedidosActualizados = obtenerTodosLosPedidos();
+      setPedidos(pedidosActualizados);
+      setPedidosNuevos(0);
+    }
+    setShowNotifications(false);
+  };
+
+  // Función para ir a un pedido específico
+  const irAPedido = (pedidoId: string) => {
+    // Marcar como leído
+    marcarPedidosComoLeidos([pedidoId]);
+    
+    // Actualizar estado
+    const pedidosActualizados = obtenerTodosLosPedidos();
+    setPedidos(pedidosActualizados);
+    const nuevos = pedidosActualizados.filter(p => !p.leido).length;
+    setPedidosNuevos(nuevos);
+    
+    // Ir a la sección de pedidos y cerrar dropdown
+    setActiveSection('orders');
+    setShowNotifications(false);
+  };
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
+
+  // Funciones para gestión de pedidos
+  const abrirModalVerPedido = (pedido: IPedido) => {
+    setPedidoSeleccionado(pedido);
+    setShowPedidoViewModal(true);
+  };
+
+  const abrirModalEditarPedido = (pedido: IPedido) => {
+    setPedidoSeleccionado(pedido);
+    setNuevoEstadoPedido(pedido.estado);
+    setShowPedidoEditModal(true);
+  };
+
+  const guardarEstadoPedido = () => {
+    if (pedidoSeleccionado) {
+      const resultado = actualizarEstadoPedido(pedidoSeleccionado.id, nuevoEstadoPedido);
+      if (resultado.success) {
+        const pedidosActualizados = obtenerTodosLosPedidos();
+        setPedidos(pedidosActualizados);
+        
+        // Actualizar contador de pedidos nuevos (solo no leídos)
+        const nuevos = pedidosActualizados.filter(p => !p.leido).length;
+        setPedidosNuevos(nuevos);
+        
+        setShowPedidoEditModal(false);
+        setPedidoSeleccionado(null);
+      }
+    }
+  };
+
   const renderProducts = () => (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -260,19 +536,20 @@ export const Dashboard = () => {
             <table className="table table-hover">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>Código</th>
                   <th>Imagen</th>
                   <th>Nombre</th>
                   <th>Precio</th>
                   <th>Stock</th>
                   <th>Categoría</th>
+                  <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {productos.map((producto) => (
                   <tr key={producto.id}>
-                    <td>{producto.id}</td>
+                    <td><strong>{producto.codigo}</strong></td>
                     <td>
                       <img 
                         src={producto.imagen} 
@@ -287,13 +564,35 @@ export const Dashboard = () => {
                         {producto.stock}
                       </span>
                     </td>
-                    <td>{producto.categoria}</td>
                     <td>
-                      <button className="btn btn-sm btn-outline-primary me-1">
+                      <span className="badge bg-info">{producto.categoria}</span>
+                    </td>
+                    <td>
+                      <span className={`badge ${producto.isActivo === Estado.activo ? 'bg-success' : 'bg-secondary'}`}>
+                        {producto.isActivo === Estado.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td>
+                      <button 
+                        className="btn btn-sm btn-outline-primary me-1" 
+                        title="Editar producto"
+                        onClick={() => abrirModalEditar(producto)}
+                      >
                         <i className="fas fa-edit"></i>
                       </button>
-                      <button className="btn btn-sm btn-outline-danger">
-                        <i className="fas fa-trash"></i>
+                      <button 
+                        className="btn btn-sm btn-outline-info me-1" 
+                        title="Agregar stock"
+                        onClick={() => abrirModalStock(producto)}
+                      >
+                        <i className="fas fa-box"></i>
+                      </button>
+                      <button 
+                        className={`btn btn-sm ${producto.isActivo === Estado.activo ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                        title={producto.isActivo === Estado.activo ? 'Desactivar' : 'Activar'}
+                        onClick={() => toggleEstadoProducto(producto)}
+                      >
+                        <i className={`fas fa-${producto.isActivo === Estado.activo ? 'times-circle' : 'check-circle'}`}></i>
                       </button>
                     </td>
                   </tr>
@@ -348,15 +647,38 @@ export const Dashboard = () => {
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-sm btn-outline-info me-1">
+                      <button 
+                        className="btn btn-sm btn-outline-info me-1"
+                        title="Ver usuario"
+                        onClick={() => abrirModalVerUsuario(usuario)}
+                      >
                         <i className="fas fa-eye"></i>
                       </button>
-                      <button className="btn btn-sm btn-outline-primary me-1">
+                      <button 
+                        className="btn btn-sm btn-outline-primary me-1"
+                        title="Editar usuario"
+                        onClick={() => abrirModalEditarUsuario(usuario)}
+                      >
                         <i className="fas fa-edit"></i>
                       </button>
-                      <button className="btn btn-sm btn-outline-danger">
-                        <i className="fas fa-trash"></i>
-                      </button>
+                      {usuario.isActivo === Estado.activo ? (
+                        <button 
+                          className="btn btn-sm btn-outline-danger"
+                          title="Desactivar usuario"
+                          onClick={() => abrirModalEliminarUsuario(usuario)}
+                          disabled={user?.id === usuario.id}
+                        >
+                          <i className="fas fa-user-times"></i>
+                        </button>
+                      ) : (
+                        <button 
+                          className="btn btn-sm btn-outline-success"
+                          title="Activar usuario"
+                          onClick={() => activarUsuario(usuario)}
+                        >
+                          <i className="fas fa-user-check"></i>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -368,30 +690,119 @@ export const Dashboard = () => {
     </>
   );
 
-  const renderOrders = () => (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Gestión de Pedidos</h2>
-        <select className="form-select w-auto">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="procesando">Procesando</option>
-          <option value="enviado">Enviado</option>
-          <option value="entregado">Entregado</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
-      </div>
+  const renderOrders = () => {
+    const pedidosFiltrados = filtroEstadoPedido 
+      ? pedidos.filter(p => p.estado === filtroEstadoPedido)
+      : pedidos;
 
-      <div className="card border-0 shadow-sm">
-        <div className="card-body">
-          <div className="alert alert-info">
-            <i className="fas fa-info-circle me-2"></i>
-            No hay pedidos registrados en el sistema actualmente.
-          </div>
+    const formatearFecha = (fecha: string) => {
+      return new Date(fecha).toLocaleDateString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const getEstadoBadgeClass = (estado: string) => {
+      const clases: { [key: string]: string } = {
+        'confirmado': 'bg-success',
+        'en-preparacion': 'bg-info',
+        'enviado': 'bg-primary',
+        'entregado': 'bg-dark',
+        'cancelado': 'bg-danger'
+      };
+      return clases[estado] || 'bg-secondary';
+    };
+
+    return (
+      <>
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h2>Gestión de Pedidos ({pedidos.length})</h2>
+          <select 
+            className="form-select w-auto"
+            value={filtroEstadoPedido}
+            onChange={(e) => setFiltroEstadoPedido(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="en-preparacion">En Preparación</option>
+            <option value="enviado">Enviado</option>
+            <option value="entregado">Entregado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
         </div>
-      </div>
-    </>
-  );
+
+        {pedidosFiltrados.length === 0 ? (
+          <div className="card border-0 shadow-sm">
+            <div className="card-body">
+              <div className="alert alert-info mb-0">
+                <i className="fas fa-info-circle me-2"></i>
+                {filtroEstadoPedido 
+                  ? `No hay pedidos con estado "${filtroEstadoPedido}".`
+                  : 'No hay pedidos registrados en el sistema actualmente.'}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="card border-0 shadow-sm">
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>ID Pedido</th>
+                      <th>Fecha</th>
+                      <th>Cliente</th>
+                      <th>Total</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pedidosFiltrados.map((pedido) => (
+                      <tr key={pedido.id}>
+                        <td><strong>{pedido.id}</strong></td>
+                        <td>{formatearFecha(pedido.fecha)}</td>
+                        <td>
+                          {pedido.contacto.nombre} {pedido.contacto.apellido}
+                          <br />
+                          <small className="text-muted">{pedido.contacto.email}</small>
+                        </td>
+                        <td><strong>${pedido.total.toLocaleString('es-CL')}</strong></td>
+                        <td>
+                          <span className={`badge ${getEstadoBadgeClass(pedido.estado)}`}>
+                            {pedido.estado}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            className="btn btn-sm btn-outline-info me-1"
+                            title="Ver detalles del pedido"
+                            onClick={() => abrirModalVerPedido(pedido)}
+                          >
+                            <i className="fas fa-eye"></i>
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            title="Cambiar estado"
+                            onClick={() => abrirModalEditarPedido(pedido)}
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   const renderSettings = () => (
     <>
@@ -431,20 +842,47 @@ export const Dashboard = () => {
               <h5 className="mb-0">Configuración de Envío</h5>
             </div>
             <div className="card-body">
-              <form>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                guardarConfiguracionEnvio({
+                  costoEnvioBase,
+                  envioGratisDesde,
+                  envioGratisHabilitado
+                });
+                mostrarToast('Configuración de envío guardada correctamente');
+              }}>
                 <div className="mb-3">
                   <label className="form-label">Costo de Envío Base</label>
-                  <input type="number" className="form-control" defaultValue="2990" min="0" />
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={costoEnvioBase}
+                    onChange={(e) => setCostoEnvioBase(Number(e.target.value))}
+                    min="0" 
+                  />
                   <small className="text-muted">Costo estándar de envío en pesos chilenos</small>
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Envío Gratis Desde</label>
-                  <input type="number" className="form-control" defaultValue="30000" min="0" />
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={envioGratisDesde}
+                    onChange={(e) => setEnvioGratisDesde(Number(e.target.value))}
+                    min="0"
+                    disabled={!envioGratisHabilitado}
+                  />
                   <small className="text-muted">Monto mínimo para envío gratuito</small>
                 </div>
                 <div className="mb-3">
                   <div className="form-check">
-                    <input className="form-check-input" type="checkbox" defaultChecked id="enableFreeShipping" />
+                    <input 
+                      className="form-check-input" 
+                      type="checkbox" 
+                      checked={envioGratisHabilitado}
+                      onChange={(e) => setEnvioGratisHabilitado(e.target.checked)}
+                      id="enableFreeShipping" 
+                    />
                     <label className="form-check-label" htmlFor="enableFreeShipping">
                       Habilitar Envío Gratis
                     </label>
@@ -555,12 +993,103 @@ export const Dashboard = () => {
                 </a>
               </div>
               <div className="d-flex align-items-center gap-3">
-                <button className="btn btn-link position-relative">
-                  <i className="fas fa-bell"></i>
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    3
-                  </span>
-                </button>
+                {/* Dropdown de Notificaciones */}
+                <div className="position-relative" ref={notificationRef}>
+                  <button 
+                    className="btn btn-link position-relative"
+                    onClick={toggleNotifications}
+                    title="Ver notificaciones"
+                  >
+                    <i className="fas fa-bell"></i>
+                    {pedidosNuevos > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {pedidosNuevos}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown de notificaciones */}
+                  {showNotifications && (
+                    <div 
+                      className="position-absolute end-0 mt-2 bg-white border rounded shadow-lg"
+                      style={{ 
+                        width: '350px', 
+                        maxHeight: '400px', 
+                        overflowY: 'auto',
+                        zIndex: 1000 
+                      }}
+                    >
+                      <div className="p-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 className="mb-0">
+                          <i className="fas fa-bell me-2 text-success"></i>
+                          Notificaciones
+                        </h6>
+                        {pedidosNuevos > 0 && (
+                          <button 
+                            className="btn btn-sm btn-link text-success"
+                            onClick={marcarTodasComoLeidas}
+                          >
+                            Marcar todas como leídas
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="list-group list-group-flush">
+                        {pedidos.filter(p => !p.leido).length === 0 ? (
+                          <div className="p-4 text-center text-muted">
+                            <i className="fas fa-check-circle fa-2x mb-2"></i>
+                            <p className="mb-0">No hay notificaciones nuevas</p>
+                          </div>
+                        ) : (
+                          pedidos
+                            .filter(p => !p.leido)
+                            .slice(0, 10)
+                            .map(pedido => (
+                              <button
+                                key={pedido.id}
+                                className="list-group-item list-group-item-action text-start"
+                                onClick={() => irAPedido(pedido.id)}
+                              >
+                                <div className="d-flex w-100 justify-content-between align-items-start">
+                                  <div className="flex-grow-1">
+                                    <h6 className="mb-1">
+                                      <i className="fas fa-shopping-cart text-success me-2"></i>
+                                      Nuevo Pedido #{pedido.id.slice(-6)}
+                                    </h6>
+                                    <p className="mb-1 small">
+                                      {pedido.contacto.nombre} {pedido.contacto.apellido}
+                                    </p>
+                                    <p className="mb-0 small text-muted">
+                                      <i className="fas fa-dollar-sign me-1"></i>
+                                      ${pedido.total.toLocaleString('es-CL')}
+                                    </p>
+                                  </div>
+                                  <small className="text-muted">
+                                    {new Date(pedido.fecha).toLocaleDateString('es-CL')}
+                                  </small>
+                                </div>
+                              </button>
+                            ))
+                        )}
+                      </div>
+
+                      {pedidos.filter(p => !p.leido).length > 10 && (
+                        <div className="p-2 text-center border-top">
+                          <button 
+                            className="btn btn-sm btn-link text-success"
+                            onClick={() => {
+                              setActiveSection('orders');
+                              setShowNotifications(false);
+                            }}
+                          >
+                            Ver todos los pedidos
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="d-flex align-items-center">
                   <div className="rounded-circle bg-success text-white d-flex align-items-center justify-content-center me-2" 
                        style={{ width: '35px', height: '35px' }}>
@@ -585,6 +1114,644 @@ export const Dashboard = () => {
           {activeSection === 'settings' && renderSettings()}
         </div>
       </div>
+
+      {/* Modal para agregar/editar stock */}
+      {showStockModal && productoSeleccionado && (
+        <div 
+          className="modal fade show" 
+          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowStockModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-box text-info me-2"></i>
+                  Actualizar Stock - {productoSeleccionado.nombre}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowStockModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Stock Actual</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={productoSeleccionado.stock} 
+                    disabled 
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Nuevo Stock</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={nuevoStock}
+                    onChange={(e) => setNuevoStock(Number(e.target.value))}
+                    min="0"
+                  />
+                  <small className="text-muted">
+                    Diferencia: {nuevoStock - productoSeleccionado.stock > 0 ? '+' : ''}{nuevoStock - productoSeleccionado.stock}
+                  </small>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowStockModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={guardarStock}
+                >
+                  <i className="fas fa-save me-2"></i>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar producto */}
+      {showEditModal && productoSeleccionado && (
+        <div 
+          className="modal fade show" 
+          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowEditModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-edit text-primary me-2"></i>
+                  Editar Producto - ID: {productoSeleccionado.id}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowEditModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Nombre *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formEdit.nombre}
+                      onChange={(e) => setFormEdit({...formEdit, nombre: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Precio *</label>
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      value={formEdit.precio}
+                      onChange={(e) => setFormEdit({...formEdit, precio: Number(e.target.value)})}
+                      min="0"
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Stock *</label>
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      value={formEdit.stock}
+                      onChange={(e) => setFormEdit({...formEdit, stock: Number(e.target.value)})}
+                      min="0"
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Categoría *</label>
+                    <select 
+                      className="form-select" 
+                      value={formEdit.categoria}
+                      onChange={(e) => setFormEdit({...formEdit, categoria: e.target.value})}
+                    >
+                      <option value="frutas">Frutas</option>
+                      <option value="verduras">Verduras</option>
+                      <option value="lacteos">Lácteos</option>
+                      <option value="carnes">Carnes</option>
+                      <option value="panaderia">Panadería</option>
+                      <option value="bebidas">Bebidas</option>
+                      <option value="abarrotes">Abarrotes</option>
+                    </select>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Descripción *</label>
+                    <textarea 
+                      className="form-control" 
+                      rows={3}
+                      value={formEdit.descripcion}
+                      onChange={(e) => setFormEdit({...formEdit, descripcion: e.target.value})}
+                    ></textarea>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">URL de Imagen *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formEdit.imagen}
+                      onChange={(e) => setFormEdit({...formEdit, imagen: e.target.value})}
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                    />
+                    {formEdit.imagen && (
+                      <div className="mt-2">
+                        <img 
+                          src={formEdit.imagen} 
+                          alt="Preview" 
+                          style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }}
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/100';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={guardarEdicion}
+                >
+                  <i className="fas fa-save me-2"></i>
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Usuario */}
+      {showUserViewModal && usuarioSeleccionado && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-user me-2"></i>
+                  Información del Usuario
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowUserViewModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <p><strong>ID:</strong> {usuarioSeleccionado.id}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Usuario:</strong> {usuarioSeleccionado.usuario}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Nombre:</strong> {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellido}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Email:</strong> {usuarioSeleccionado.email}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Teléfono:</strong> {usuarioSeleccionado.telefono || 'N/A'}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Dirección:</strong> {usuarioSeleccionado.direccion || 'N/A'}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Rol:</strong> 
+                      <span className={`badge ms-2 ${usuarioSeleccionado.rol === 'administrador' ? 'bg-danger' : 'bg-primary'}`}>
+                        {usuarioSeleccionado.rol}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Estado:</strong> 
+                      <span className={`badge ms-2 ${usuarioSeleccionado.isActivo === Estado.activo ? 'bg-success' : 'bg-secondary'}`}>
+                        {usuarioSeleccionado.isActivo === Estado.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="col-12">
+                    <p><strong>Fecha de Registro:</strong> {usuarioSeleccionado.fechaRegistro || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowUserViewModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Usuario */}
+      {showUserEditModal && usuarioSeleccionado && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-edit me-2"></i>
+                  Editar Usuario
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowUserEditModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Nombre *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formEditUser.nombre}
+                      onChange={(e) => setFormEditUser({...formEditUser, nombre: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Apellido *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formEditUser.apellido}
+                      onChange={(e) => setFormEditUser({...formEditUser, apellido: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Email *</label>
+                    <input 
+                      type="email" 
+                      className="form-control" 
+                      value={formEditUser.email}
+                      onChange={(e) => setFormEditUser({...formEditUser, email: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Teléfono</label>
+                    <input 
+                      type="tel" 
+                      className="form-control" 
+                      value={formEditUser.telefono}
+                      onChange={(e) => setFormEditUser({...formEditUser, telefono: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Dirección</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formEditUser.direccion}
+                      onChange={(e) => setFormEditUser({...formEditUser, direccion: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Rol *</label>
+                    <select 
+                      className="form-select"
+                      value={formEditUser.rol}
+                      onChange={(e) => setFormEditUser({...formEditUser, rol: e.target.value})}
+                    >
+                      <option value="cliente">Cliente</option>
+                      <option value="administrador">Administrador</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowUserEditModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={guardarEdicionUsuario}
+                >
+                  <i className="fas fa-save me-2"></i>
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminar Usuario */}
+      {showUserDeleteModal && usuarioSeleccionado && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-white border-bottom">
+                <h5 className="modal-title text-dark">
+                  <i className="fas fa-exclamation-triangle me-2 text-warning"></i>
+                  Confirmar Desactivación
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowUserDeleteModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="text-center py-3">
+                  <i className="fas fa-user-times fa-4x text-danger mb-3"></i>
+                  <h5 className="text-dark">¿Estás seguro de desactivar este usuario?</h5>
+                  <p className="text-muted mb-0">
+                    <strong>{usuarioSeleccionado.nombre} {usuarioSeleccionado.apellido}</strong>
+                  </p>
+                  <p className="text-muted">
+                    {usuarioSeleccionado.email}
+                  </p>
+                  <div className="alert alert-warning mt-3" role="alert">
+                    <i className="fas fa-info-circle me-2"></i>
+                    El usuario será desactivado y no podrá iniciar sesión.
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowUserDeleteModal(false)}
+                >
+                  <i className="fas fa-times me-2"></i>
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={confirmarEliminarUsuario}
+                >
+                  <i className="fas fa-user-times me-2"></i>
+                  Sí, Desactivar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Pedido */}
+      {showPedidoViewModal && pedidoSeleccionado && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-xl">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-shopping-cart me-2"></i>
+                  Detalles del Pedido #{pedidoSeleccionado.id}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowPedidoViewModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <h6 className="border-bottom pb-2 mb-3">Información del Cliente</h6>
+                    <p><strong>Nombre:</strong> {pedidoSeleccionado.contacto.nombre} {pedidoSeleccionado.contacto.apellido}</p>
+                    <p><strong>Email:</strong> {pedidoSeleccionado.contacto.email}</p>
+                    <p><strong>Teléfono:</strong> {pedidoSeleccionado.contacto.telefono}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6 className="border-bottom pb-2 mb-3">Información de Envío</h6>
+                    <p><strong>Dirección:</strong> {pedidoSeleccionado.envio.direccion}</p>
+                    <p><strong>Ciudad:</strong> {pedidoSeleccionado.envio.ciudad}</p>
+                    <p><strong>Región:</strong> {pedidoSeleccionado.envio.region}</p>
+                    {pedidoSeleccionado.envio.codigoPostal && (
+                      <p><strong>Código Postal:</strong> {pedidoSeleccionado.envio.codigoPostal}</p>
+                    )}
+                    {pedidoSeleccionado.envio.notas && (
+                      <p><strong>Notas:</strong> {pedidoSeleccionado.envio.notas}</p>
+                    )}
+                  </div>
+                  <div className="col-12">
+                    <h6 className="border-bottom pb-2 mb-3">Productos del Pedido</h6>
+                    <div className="table-responsive">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>Producto</th>
+                            <th>Precio Unitario</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pedidoSeleccionado.items.map((item, index) => (
+                            <tr key={index}>
+                              <td>{item.nombre}</td>
+                              <td>${item.precio.toLocaleString('es-CL')}</td>
+                              <td>{item.cantidad}</td>
+                              <td>${item.subtotal.toLocaleString('es-CL')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="col-12">
+                    <div className="alert alert-light">
+                      <div className="d-flex justify-content-between">
+                        <span>Subtotal:</span>
+                        <strong>${pedidoSeleccionado.subtotal.toLocaleString('es-CL')}</strong>
+                      </div>
+                      <div className="d-flex justify-content-between">
+                        <span>Costo de Envío:</span>
+                        <strong>
+                          {pedidoSeleccionado.envio.esGratis 
+                            ? 'GRATIS' 
+                            : `$${pedidoSeleccionado.costoEnvio.toLocaleString('es-CL')}`
+                          }
+                        </strong>
+                      </div>
+                      <hr />
+                      <div className="d-flex justify-content-between">
+                        <span className="h5">Total:</span>
+                        <span className="h5 text-success">${pedidoSeleccionado.total.toLocaleString('es-CL')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Estado:</strong> 
+                      <span className={`badge ms-2 ${
+                        pedidoSeleccionado.estado === 'confirmado' ? 'bg-success' :
+                        pedidoSeleccionado.estado === 'en-preparacion' ? 'bg-info' :
+                        pedidoSeleccionado.estado === 'enviado' ? 'bg-primary' :
+                        pedidoSeleccionado.estado === 'entregado' ? 'bg-dark' :
+                        'bg-danger'
+                      }`}>
+                        {pedidoSeleccionado.estado}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="col-md-6">
+                    <p><strong>Fecha:</strong> {new Date(pedidoSeleccionado.fecha).toLocaleString('es-CL')}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowPedidoViewModal(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Estado del Pedido */}
+      {showPedidoEditModal && pedidoSeleccionado && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-edit me-2"></i>
+                  Cambiar Estado del Pedido
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowPedidoEditModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p><strong>Pedido:</strong> {pedidoSeleccionado.id}</p>
+                <p><strong>Cliente:</strong> {pedidoSeleccionado.contacto.nombre} {pedidoSeleccionado.contacto.apellido}</p>
+                <hr />
+                <div className="mb-3">
+                  <label className="form-label">Estado Actual:</label>
+                  <div>
+                    <span className={`badge ${
+                      pedidoSeleccionado.estado === 'confirmado' ? 'bg-success' :
+                      pedidoSeleccionado.estado === 'en-preparacion' ? 'bg-info' :
+                      pedidoSeleccionado.estado === 'enviado' ? 'bg-primary' :
+                      pedidoSeleccionado.estado === 'entregado' ? 'bg-dark' :
+                      'bg-danger'
+                    }`}>
+                      {pedidoSeleccionado.estado}
+                    </span>
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Nuevo Estado:</label>
+                  <select 
+                    className="form-select"
+                    value={nuevoEstadoPedido}
+                    onChange={(e) => setNuevoEstadoPedido(e.target.value as IPedido['estado'])}
+                  >
+                    <option value="confirmado">Confirmado</option>
+                    <option value="en-preparacion">En Preparación</option>
+                    <option value="enviado">Enviado</option>
+                    <option value="entregado">Entregado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowPedidoEditModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={guardarEstadoPedido}
+                >
+                  <i className="fas fa-save me-2"></i>
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notificación Toast */}
+      {showToast && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: '20px', 
+            right: '20px', 
+            zIndex: 9999, 
+            minWidth: '300px', 
+            maxWidth: '400px', 
+            animation: 'slideInRight 0.3s ease-out' 
+          }}
+        >
+          <div className="card shadow-lg border-0">
+            <div className="card-body p-3 d-flex align-items-center">
+              <i className="fas fa-check-circle text-success me-3" style={{ fontSize: '2rem' }}></i>
+              <div className="flex-grow-1">
+                <h6 className="mb-0">{toastMessage}</h6>
+              </div>
+              <button 
+                className="btn-close ms-2" 
+                onClick={() => setShowToast(false)}
+                aria-label="Cerrar"
+              ></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

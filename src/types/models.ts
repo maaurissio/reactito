@@ -12,7 +12,6 @@ export enum CategoriaProducto {
 export enum RolUsuario {
   administrador = 'administrador',
   cliente = 'cliente',
-  vendedor = 'vendedor',
 }
 
 export enum Estado {
@@ -42,7 +41,6 @@ export interface IProducto {
   imagen: string;
   categoria: CategoriaProducto | string;
   isActivo: Estado;
-  estado?: Estado;
   fechaCreacion?: string;
   fechaActualizacion?: string;
   peso?: string;

@@ -1,6 +1,6 @@
 import { CategoriaProducto, Estado } from '../types';
 import type { IDataProductos, IProducto } from '../types';
-import { productosIniciales } from './datosIniciales';
+import { productosIniciales } from './productosIniciales';
 
 const CLAVE_DATOS_PRODUCTOS = 'productos_huertohogar_data';
 
@@ -51,7 +51,7 @@ function limpiarStock(valor: unknown): number {
 }
 
 function normalizarProducto(producto: Partial<IProducto>): IProducto {
-  const estadoNormalizado = normalizarEstado(producto.isActivo ?? producto.estado);
+  const estadoNormalizado = normalizarEstado(producto.isActivo);
   return {
     id: producto.id ?? 0,
     codigo: producto.codigo ?? `PR${Date.now()}`,
@@ -62,7 +62,6 @@ function normalizarProducto(producto: Partial<IProducto>): IProducto {
     imagen: producto.imagen ?? '/img/default.jpg',
     categoria: producto.categoria ?? CategoriaProducto.frutas,
     isActivo: estadoNormalizado,
-    estado: estadoNormalizado,
     peso: producto.peso ?? '1kg',
     fechaCreacion: producto.fechaCreacion,
     fechaActualizacion: producto.fechaActualizacion,

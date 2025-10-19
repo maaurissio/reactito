@@ -13,7 +13,8 @@ export const usuariosIniciales: IUsuario[] = [
     isActivo: Estado.activo,
     estado: Estado.activo,
     fechaRegistro: '2025-01-01',
-    avatar: '/img/avatars/admin.png',
+    telefono: '91234567',
+    direccion: 'Av. hola',
   },
   {
     id: 2,
@@ -26,6 +27,8 @@ export const usuariosIniciales: IUsuario[] = [
     isActivo: Estado.activo,
     estado: Estado.activo,
     fechaRegistro: '2025-01-01',
+    telefono: '945678912',
+    direccion: 'mi casa',
   },
   {
     id: 3,
@@ -38,6 +41,8 @@ export const usuariosIniciales: IUsuario[] = [
     isActivo: Estado.activo,
     estado: Estado.activo,
     fechaRegistro: '2025-01-15',
+    telefono: '978912345',
+    direccion: 'mi casa',
   },
   {
     id: 4,
@@ -50,8 +55,8 @@ export const usuariosIniciales: IUsuario[] = [
     isActivo: Estado.activo,
     estado: Estado.activo,
     fechaRegistro: '2025-02-01',
-    telefono: '+56912345678',
-    direccion: 'Av. Principal 123, Santiago',
+    telefono: '998765432',
+    direccion: 'mi casa',
   },
 ];
 
