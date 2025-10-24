@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService } from '../../services/usuariosService';
 import { obtenerTodosLosPedidos, actualizarEstadoPedido, marcarPedidosComoLeidos, type IPedido } from '../../services/pedidosService';
 import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/shippingConfigService';
+import { agregarProducto } from '../../services/productosService';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import type { IProducto, IUsuario } from '../../types';
@@ -23,6 +24,7 @@ export const Dashboard = () => {
   // Estados para modales de productos
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<IProducto | null>(null);
   const [nuevoStock, setNuevoStock] = useState(0);
   
@@ -57,6 +59,7 @@ export const Dashboard = () => {
   // Estados para notificación toast
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // Estado para notificaciones de pedidos nuevos
   const [pedidosNuevos, setPedidosNuevos] = useState(0);
@@ -72,6 +75,17 @@ export const Dashboard = () => {
     categoria: '',
     imagen: ''
   });
+
+  // Estados para el formulario de agregar producto
+  const [formAdd, setFormAdd] = useState({
+    nombre: '',
+    descripcion: '',
+    precio: 0,
+    stock: 0,
+    categoria: 'verduras',
+    imagen: ''
+  });
+  const [imagenPreview, setImagenPreview] = useState('');
 
   // Estadísticas dinámicas
   const totalProductos = productos.length;
@@ -368,6 +382,127 @@ export const Dashboard = () => {
     }
   };
 
+  const abrirModalAgregar = () => {
+    setFormAdd({
+      nombre: '',
+      descripcion: '',
+      precio: 0,
+      stock: 0,
+      categoria: 'verduras',
+      imagen: ''
+    });
+    setImagenPreview('');
+    setShowAddModal(true);
+  };
+
+  const guardarNuevoProducto = () => {
+    // Validaciones
+    if (!formAdd.nombre.trim()) {
+      mostrarToast('El nombre del producto es obligatorio', 'error');
+      return;
+    }
+    if (!formAdd.descripcion.trim()) {
+      mostrarToast('La descripción del producto es obligatoria', 'error');
+      return;
+    }
+    if (formAdd.precio <= 0) {
+      mostrarToast('El precio debe ser mayor a 0', 'error');
+      return;
+    }
+    if (formAdd.stock < 0) {
+      mostrarToast('El stock no puede ser negativo', 'error');
+      return;
+    }
+    if (!formAdd.imagen.trim()) {
+      mostrarToast('La URL de la imagen es obligatoria', 'error');
+      return;
+    }
+
+    try {
+      console.log('Datos del producto a agregar:', {
+        nombre: formAdd.nombre,
+        descripcion: formAdd.descripcion,
+        precio: formAdd.precio,
+        stock: formAdd.stock,
+        categoria: formAdd.categoria,
+        imagen: formAdd.imagen,
+        isActivo: Estado.activo
+      });
+      
+      const nuevoProducto = agregarProducto({
+        nombre: formAdd.nombre,
+        descripcion: formAdd.descripcion,
+        precio: formAdd.precio,
+        stock: formAdd.stock,
+        categoria: formAdd.categoria as any,
+        imagen: formAdd.imagen,
+        isActivo: Estado.activo
+      });
+      
+      console.log('Producto agregado:', nuevoProducto);
+      console.log('Imagen del producto agregado:', nuevoProducto.imagen);
+      
+      // Forzar recarga completa de productos
+      setTimeout(() => {
+        cargarProductos();
+      }, 100);
+      
+      setShowAddModal(false);
+      
+      // Resetear formulario
+      setFormAdd({
+        nombre: '',
+        descripcion: '',
+        precio: 0,
+        stock: 0,
+        categoria: 'verduras',
+        imagen: ''
+      });
+      setImagenPreview('');
+      
+      mostrarToast('Producto agregado exitosamente', 'success');
+    } catch (error) {
+      console.error('Error al agregar producto:', error);
+      mostrarToast('Error al agregar el producto', 'error');
+    }
+  };
+
+  const handleImagenChange = (url: string) => {
+    setFormAdd({ ...formAdd, imagen: url });
+    setImagenPreview(url);
+  };
+
+  const handleArchivoImagen = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+      mostrarToast('Por favor selecciona un archivo de imagen válido', 'error');
+      return;
+    }
+
+    // Validar tamaño (máximo 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      mostrarToast('La imagen es muy grande. Máximo 2MB', 'error');
+      return;
+    }
+
+    // Convertir a Base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setFormAdd({ ...formAdd, imagen: base64String });
+      setImagenPreview(base64String);
+      mostrarToast('Imagen cargada correctamente', 'success');
+    };
+    reader.onerror = () => {
+      mostrarToast('Error al cargar la imagen', 'error');
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Funciones para gestión de usuarios
   const abrirModalVerUsuario = (usuario: IUsuario) => {
     setUsuarioSeleccionado(usuario);
@@ -431,8 +566,9 @@ export const Dashboard = () => {
   };
 
   // Función para mostrar notificación toast
-  const mostrarToast = (mensaje: string) => {
+  const mostrarToast = (mensaje: string, tipo: 'success' | 'error' = 'success') => {
     setToastMessage(mensaje);
+    setToastType(tipo);
     setShowToast(true);
     setTimeout(() => {
       setShowToast(false);
@@ -525,7 +661,7 @@ export const Dashboard = () => {
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Gestión de Productos</h2>
-        <button className="btn btn-success">
+        <button className="btn btn-success" onClick={abrirModalAgregar}>
           <i className="fas fa-plus me-2"></i>Agregar Producto
         </button>
       </div>
@@ -552,9 +688,16 @@ export const Dashboard = () => {
                     <td><strong>{producto.codigo}</strong></td>
                     <td>
                       <img 
-                        src={producto.imagen} 
+                        src={
+                          producto.imagen.startsWith('data:') 
+                            ? producto.imagen 
+                            : producto.imagen.startsWith('img/') 
+                              ? `/${producto.imagen}` 
+                              : producto.imagen
+                        } 
                         alt={producto.nombre} 
                         style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
+                        onError={(e) => { e.currentTarget.src = '/img/default.jpg'; }}
                       />
                     </td>
                     <td>{producto.nombre}</td>
@@ -1181,6 +1324,200 @@ export const Dashboard = () => {
         </div>
       )}
 
+      {/* Modal para agregar producto */}
+      {showAddModal && (
+        <div 
+          className="modal fade show" 
+          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowAddModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-plus-circle text-success me-2"></i>
+                  Agregar Nuevo Producto
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowAddModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Nombre *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formAdd.nombre}
+                      onChange={(e) => setFormAdd({...formAdd, nombre: e.target.value})}
+                      placeholder="Ej: Tomates Cherry"
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Precio *</label>
+                    <div className="input-group">
+                      <span className="input-group-text">$</span>
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        value={formAdd.precio}
+                        onChange={(e) => setFormAdd({...formAdd, precio: Number(e.target.value)})}
+                        min="0"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Stock Inicial *</label>
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      value={formAdd.stock}
+                      onChange={(e) => setFormAdd({...formAdd, stock: Number(e.target.value)})}
+                      min="0"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Categoría *</label>
+                    <select 
+                      className="form-select" 
+                      value={formAdd.categoria}
+                      onChange={(e) => setFormAdd({...formAdd, categoria: e.target.value})}
+                    >
+                      <option value="frutas">Frutas</option>
+                      <option value="verduras">Verduras</option>
+                      <option value="lacteos">Lácteos</option>
+                      <option value="carnes">Carnes</option>
+                      <option value="panaderia">Panadería</option>
+                      <option value="bebidas">Bebidas</option>
+                      <option value="abarrotes">Abarrotes</option>
+                    </select>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Descripción *</label>
+                    <textarea 
+                      className="form-control" 
+                      rows={3}
+                      value={formAdd.descripcion}
+                      onChange={(e) => setFormAdd({...formAdd, descripcion: e.target.value})}
+                      placeholder="Describe el producto..."
+                    ></textarea>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Imagen del Producto *</label>
+                    
+                    {/* Pestañas para elegir método */}
+                    <ul className="nav nav-tabs mb-3" role="tablist">
+                      <li className="nav-item" role="presentation">
+                        <button 
+                          className="nav-link active" 
+                          id="url-tab" 
+                          data-bs-toggle="tab" 
+                          data-bs-target="#url-panel" 
+                          type="button"
+                        >
+                          <i className="fas fa-link me-2"></i>URL
+                        </button>
+                      </li>
+                      <li className="nav-item" role="presentation">
+                        <button 
+                          className="nav-link" 
+                          id="upload-tab" 
+                          data-bs-toggle="tab" 
+                          data-bs-target="#upload-panel" 
+                          type="button"
+                        >
+                          <i className="fas fa-upload me-2"></i>Subir Archivo
+                        </button>
+                      </li>
+                    </ul>
+
+                    {/* Contenido de las pestañas */}
+                    <div className="tab-content">
+                      {/* Panel URL */}
+                      <div className="tab-pane fade show active" id="url-panel">
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          value={formAdd.imagen.startsWith('data:') ? '' : formAdd.imagen}
+                          onChange={(e) => handleImagenChange(e.target.value)}
+                          placeholder="https://ejemplo.com/imagen.jpg"
+                        />
+                        <small className="text-muted">
+                          Pega la URL de una imagen pública
+                        </small>
+                      </div>
+
+                      {/* Panel Subir Archivo */}
+                      <div className="tab-pane fade" id="upload-panel">
+                        <input 
+                          type="file" 
+                          className="form-control" 
+                          accept="image/*"
+                          onChange={handleArchivoImagen}
+                        />
+                        <small className="text-muted">
+                          Selecciona una imagen de tu computadora (máx. 2MB)
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                  {imagenPreview && (
+                    <div className="col-12">
+                      <label className="form-label">Vista Previa</label>
+                      <div className="text-center">
+                        <img 
+                          src={
+                            imagenPreview.startsWith('data:') 
+                              ? imagenPreview 
+                              : imagenPreview.startsWith('img/') 
+                                ? `/${imagenPreview}` 
+                                : imagenPreview
+                          } 
+                          alt="Preview" 
+                          style={{ 
+                            maxWidth: '200px', 
+                            maxHeight: '200px', 
+                            objectFit: 'cover', 
+                            borderRadius: '8px',
+                            border: '2px solid #dee2e6'
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/200?text=Error+al+cargar';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowAddModal(false)}
+                >
+                  <i className="fas fa-times me-2"></i>
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={guardarNuevoProducto}
+                >
+                  <i className="fas fa-save me-2"></i>
+                  Agregar Producto
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal para editar producto */}
       {showEditModal && productoSeleccionado && (
         <div 
@@ -1269,7 +1606,13 @@ export const Dashboard = () => {
                     {formEdit.imagen && (
                       <div className="mt-2">
                         <img 
-                          src={formEdit.imagen} 
+                          src={
+                            formEdit.imagen.startsWith('data:') 
+                              ? formEdit.imagen 
+                              : formEdit.imagen.startsWith('img/') 
+                                ? `/${formEdit.imagen}` 
+                                : formEdit.imagen
+                          } 
                           alt="Preview" 
                           style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }}
                           onError={(e) => {
@@ -1724,9 +2067,9 @@ export const Dashboard = () => {
             animation: 'slideInRight 0.3s ease-out' 
           }}
         >
-          <div className="card shadow-lg border-0">
+          <div className={`card shadow-lg border-0 border-start border-${toastType === 'error' ? 'danger' : 'success'} border-4`}>
             <div className="card-body p-3 d-flex align-items-center">
-              <i className="fas fa-check-circle text-success me-3" style={{ fontSize: '2rem' }}></i>
+              <i className={`fas fa-${toastType === 'error' ? 'exclamation-circle text-danger' : 'check-circle text-success'} me-3`} style={{ fontSize: '2rem' }}></i>
               <div className="flex-grow-1">
                 <h6 className="mb-0">{toastMessage}</h6>
               </div>

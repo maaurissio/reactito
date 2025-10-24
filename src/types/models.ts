@@ -1,7 +1,3 @@
-// ============================================
-// ENUMS
-// ============================================
-
 export enum CategoriaProducto {
   frutas = 'Frutas Frescas',
   verduras = 'Verduras Orgánicas',
@@ -26,10 +22,6 @@ export enum EstadoPedido {
   entregado = 'Entregado',
   cancelado = 'Cancelado',
 }
-
-// ============================================
-// INTERFACES - PRODUCTOS
-// ============================================
 
 export interface IProducto {
   id: number;
@@ -57,10 +49,6 @@ export interface IDataProductos {
   productos: IProducto[];
   configuracion: IProductoConfiguracion;
 }
-
-// ============================================
-// INTERFACES - USUARIOS
-// ============================================
 
 export interface IUsuario {
   id: number;
@@ -106,10 +94,6 @@ export interface ISesionActiva {
   avatar?: string;
 }
 
-// ============================================
-// INTERFACES - CARRITO Y PEDIDOS
-// ============================================
-
 export interface IItemCarrito {
   id: number;
   producto: IProducto;
@@ -153,10 +137,6 @@ export interface IProductoFavorito {
   precio: number;
   imagen: string;
 }
-
-// ============================================
-// TYPES - FORMULARIOS
-// ============================================
 
 export type LoginFormData = {
   email: string;

@@ -4,10 +4,6 @@ import { productosIniciales } from './productosIniciales';
 
 const CLAVE_DATOS_PRODUCTOS = 'productos_huertohogar_data';
 
-// ============================================
-// FUNCIONES DE NORMALIZACIÓN
-// ============================================
-
 function normalizarEstado(valor: unknown): Estado {
   if (valor === Estado.activo || valor === Estado.inactivo) {
     return valor;
@@ -52,6 +48,26 @@ function limpiarStock(valor: unknown): number {
 
 function normalizarProducto(producto: Partial<IProducto>): IProducto {
   const estadoNormalizado = normalizarEstado(producto.isActivo);
+  
+  // Asegurar que la imagen se preserve correctamente (URL o Base64)
+  let imagenFinal = '/img/default.jpg';
+  
+  if (producto.imagen && producto.imagen.trim() !== '') {
+    // Si es Base64 o URL válida, usarla directamente
+    if (producto.imagen.startsWith('data:') || 
+        producto.imagen.startsWith('http://') || 
+        producto.imagen.startsWith('https://') ||
+        producto.imagen.startsWith('img/') ||
+        producto.imagen.startsWith('/')) {
+      imagenFinal = producto.imagen;
+    } else {
+      // Si no tiene protocolo, asumir que es una ruta relativa
+      imagenFinal = producto.imagen;
+    }
+  }
+  
+  console.log('Normalizando producto - imagen original:', producto.imagen?.substring(0, 50), 'imagen final:', imagenFinal.substring(0, 50));
+  
   return {
     id: producto.id ?? 0,
     codigo: producto.codigo ?? `PR${Date.now()}`,
@@ -59,7 +75,7 @@ function normalizarProducto(producto: Partial<IProducto>): IProducto {
     descripcion: producto.descripcion ?? '',
     precio: limpiarPrecio(producto.precio),
     stock: limpiarStock(producto.stock),
-    imagen: producto.imagen ?? '/img/default.jpg',
+    imagen: imagenFinal,
     categoria: producto.categoria ?? CategoriaProducto.frutas,
     isActivo: estadoNormalizado,
     peso: producto.peso ?? '1kg',

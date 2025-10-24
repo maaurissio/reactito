@@ -65,26 +65,26 @@ function generarIdPedido(): string {
 export function crearPedido(
   usuario: IUsuario | null,
   contacto: {
-    nombre: string;
-    apellido: string;
-    email: string;
-    telefono: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
   },
   envio: {
-    direccion: string;
-    ciudad: string;
-    region: string;
-    codigoPostal?: string;
-    notas?: string;
-    costo: number;
-    esGratis: boolean;
+  direccion: string;
+  ciudad: string;
+  region: string;
+  codigoPostal?: string;
+  notas?: string;
+  costo: number;
+  esGratis: boolean;
   },
   items: Array<{
-    id: number;
-    nombre: string;
-    precio: number;
-    cantidad: number;
-    subtotal: number;
+  id: number;
+  nombre: string;
+  precio: number;
+  cantidad: number;
+  subtotal: number;
   }>,
   subtotal: number,
   costoEnvio: number,
@@ -92,7 +92,7 @@ export function crearPedido(
 ): { success: boolean; pedido?: IPedido; mensaje?: string } {
   try {
     const datos = obtenerDatosPedidos();
-    
+
     const nuevoPedido: IPedido = {
       id: generarIdPedido(),
       fecha: new Date().toISOString(),
@@ -106,10 +106,10 @@ export function crearPedido(
       costoEnvio,
       total
     };
-    
+
     datos.pedidos.push(nuevoPedido);
     guardarDatosPedidos(datos);
-    
+
     return {
       success: true,
       pedido: nuevoPedido,
@@ -142,16 +142,16 @@ export function obtenerTodosLosPedidos(): IPedido[] {
 export function marcarPedidosComoLeidos(ids: string[]): { success: boolean; mensaje: string } {
   try {
     const datos = obtenerDatosPedidos();
-    
+
     ids.forEach(id => {
       const pedido = datos.pedidos.find(p => p.id === id);
       if (pedido) {
         pedido.leido = true;
       }
     });
-    
+
     guardarDatosPedidos(datos);
-    
+
     return {
       success: true,
       mensaje: 'Pedidos marcados como leídos'
@@ -172,17 +172,17 @@ export function actualizarEstadoPedido(
   try {
     const datos = obtenerDatosPedidos();
     const index = datos.pedidos.findIndex(p => p.id === id);
-    
+
     if (index === -1) {
       return {
         success: false,
         mensaje: 'Pedido no encontrado'
       };
     }
-    
+
     datos.pedidos[index].estado = nuevoEstado;
     guardarDatosPedidos(datos);
-    
+
     return {
       success: true,
       mensaje: 'Estado del pedido actualizado'

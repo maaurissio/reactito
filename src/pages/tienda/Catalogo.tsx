@@ -209,7 +209,13 @@ export const Catalogo = () => {
                 <div key={producto.id} className="col-12 col-sm-6 col-md-4 col-lg-3 product-col">
                   <div className="card product-card shadow-sm h-100 d-flex flex-column">
                     <img 
-                      src={producto.imagen.startsWith('img/') ? `/${producto.imagen}` : producto.imagen} 
+                      src={
+                        producto.imagen.startsWith('data:') 
+                          ? producto.imagen 
+                          : producto.imagen.startsWith('img/') 
+                            ? `/${producto.imagen}` 
+                            : producto.imagen
+                      } 
                       className="card-img-top" 
                       alt={producto.nombre}
                       onError={(e) => { e.currentTarget.src = '/img/default.jpg'; }}
