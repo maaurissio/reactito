@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useProductsStore } from '../../store/productsStore';
 import { Navigate } from 'react-router-dom';
-import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService } from '../../services/usuariosService';
+import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService, registrarUsuario } from '../../services/usuariosService';
 import { obtenerTodosLosPedidos, actualizarEstadoPedido, marcarPedidosComoLeidos, type IPedido } from '../../services/pedidosService';
 import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/shippingConfigService';
 import { agregarProducto } from '../../services/productosService';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import type { IProducto, IUsuario } from '../../types';
-import { Estado } from '../../types/models';
+import { Estado, RolUsuario } from '../../types/models';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -32,6 +32,7 @@ export const Dashboard = () => {
   const [showUserViewModal, setShowUserViewModal] = useState(false);
   const [showUserEditModal, setShowUserEditModal] = useState(false);
   const [showUserDeleteModal, setShowUserDeleteModal] = useState(false);
+  const [showUserAddModal, setShowUserAddModal] = useState(false);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<IUsuario | null>(null);
   const [formEditUser, setFormEditUser] = useState({
     nombre: '',
@@ -40,6 +41,16 @@ export const Dashboard = () => {
     telefono: '',
     direccion: '',
     rol: ''
+  });
+  const [formAddUser, setFormAddUser] = useState({
+    nombre: '',
+    apellido: '',
+    usuario: '',
+    email: '',
+    password: '',
+    telefono: '',
+    direccion: '',
+    rol: 'cliente'
   });
 
   // Estados para filtros
@@ -565,6 +576,84 @@ export const Dashboard = () => {
     setUsuarios(obtenerTodosLosUsuarios());
   };
 
+  // Funciones para agregar usuario
+  const abrirModalAgregarUsuario = () => {
+    setFormAddUser({
+      nombre: '',
+      apellido: '',
+      usuario: '',
+      email: '',
+      password: '',
+      telefono: '',
+      direccion: '',
+      rol: 'cliente'
+    });
+    setShowUserAddModal(true);
+  };
+
+  const guardarNuevoUsuario = () => {
+    // Validaciones
+    if (!formAddUser.nombre.trim()) {
+      mostrarToast('El nombre es obligatorio', 'error');
+      return;
+    }
+    if (!formAddUser.apellido.trim()) {
+      mostrarToast('El apellido es obligatorio', 'error');
+      return;
+    }
+    if (!formAddUser.usuario.trim()) {
+      mostrarToast('El nombre de usuario es obligatorio', 'error');
+      return;
+    }
+    if (!formAddUser.email.trim() || !formAddUser.email.includes('@')) {
+      mostrarToast('Ingrese un email válido', 'error');
+      return;
+    }
+    if (!formAddUser.password || formAddUser.password.length < 6) {
+      mostrarToast('La contraseña debe tener al menos 6 caracteres', 'error');
+      return;
+    }
+
+    try {
+      const nuevoUsuario = registrarUsuario({
+        nombre: formAddUser.nombre,
+        apellido: formAddUser.apellido,
+        usuario: formAddUser.usuario,
+        email: formAddUser.email,
+        password: formAddUser.password,
+        telefono: formAddUser.telefono,
+        direccion: formAddUser.direccion,
+        rol: formAddUser.rol === 'administrador' ? RolUsuario.administrador : RolUsuario.cliente,
+        isActivo: Estado.activo,
+      });
+
+      if (nuevoUsuario) {
+        // Recargar lista de usuarios
+        setUsuarios(obtenerTodosLosUsuarios());
+        setShowUserAddModal(false);
+        
+        // Resetear formulario
+        setFormAddUser({
+          nombre: '',
+          apellido: '',
+          usuario: '',
+          email: '',
+          password: '',
+          telefono: '',
+          direccion: '',
+          rol: 'cliente'
+        });
+        
+        mostrarToast(`Usuario ${nuevoUsuario.nombre} creado exitosamente. Ya puede iniciar sesión.`, 'success');
+      } else {
+        mostrarToast('El email o nombre de usuario ya están en uso', 'error');
+      }
+    } catch (error) {
+      console.error('Error al crear usuario:', error);
+      mostrarToast('Error al crear el usuario', 'error');
+    }
+  };
+
   // Función para mostrar notificación toast
   const mostrarToast = (mensaje: string, tipo: 'success' | 'error' = 'success') => {
     setToastMessage(mensaje);
@@ -752,7 +841,10 @@ export const Dashboard = () => {
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Gestión de Usuarios</h2>
-        <button className="btn btn-success">
+        <button 
+          className="btn btn-success"
+          onClick={abrirModalAgregarUsuario}
+        >
           <i className="fas fa-user-plus me-2"></i>Agregar Usuario
         </button>
       </div>
@@ -2047,6 +2139,157 @@ export const Dashboard = () => {
                 >
                   <i className="fas fa-save me-2"></i>
                   Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Agregar Usuario */}
+      {showUserAddModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">
+                  <i className="fas fa-user-plus me-2"></i>
+                  Agregar Nuevo Usuario
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowUserAddModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-user me-1 text-success"></i>Nombre <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formAddUser.nombre}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, nombre: e.target.value })}
+                      placeholder="Ej: Juan"
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-user me-1 text-success"></i>Apellido <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formAddUser.apellido}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, apellido: e.target.value })}
+                      placeholder="Ej: Pérez"
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-id-badge me-1 text-info"></i>Usuario <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formAddUser.usuario}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, usuario: e.target.value })}
+                      placeholder="Ej: juanp (sin espacios)"
+                      required
+                    />
+                    <small className="text-muted">Será usado para iniciar sesión</small>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-envelope me-1 text-primary"></i>Email <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={formAddUser.email}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, email: e.target.value })}
+                      placeholder="Ej: juan@ejemplo.com"
+                      required
+                    />
+                    <small className="text-muted">También puede usarlo para iniciar sesión</small>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-lock me-1 text-warning"></i>Contraseña <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={formAddUser.password}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, password: e.target.value })}
+                      placeholder="Mínimo 6 caracteres"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-user-shield me-1 text-danger"></i>Rol <span className="text-danger">*</span>
+                    </label>
+                    <select
+                      className="form-select"
+                      value={formAddUser.rol}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, rol: e.target.value })}
+                      required
+                    >
+                      <option value="cliente">Cliente</option>
+                      <option value="administrador">Administrador</option>
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-phone me-1 text-info"></i>Teléfono
+                    </label>
+                    <input
+                      type="tel"
+                      className="form-control"
+                      value={formAddUser.telefono}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, telefono: e.target.value })}
+                      placeholder="+56 9 1234 5678"
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      <i className="fas fa-map-marker-alt me-1 text-success"></i>Dirección
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formAddUser.direccion}
+                      onChange={(e) => setFormAddUser({ ...formAddUser, direccion: e.target.value })}
+                      placeholder="Calle, número, comuna"
+                    />
+                  </div>
+                </div>
+                <div className="alert alert-info mt-3 mb-0">
+                  <i className="fas fa-info-circle me-2"></i>
+                  <strong>Importante:</strong> El usuario podrá iniciar sesión con el <strong>nombre de usuario</strong> o el <strong>email</strong> que ingreses aquí.
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowUserAddModal(false)}
+                >
+                  <i className="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={guardarNuevoUsuario}
+                >
+                  <i className="fas fa-save me-1"></i>Crear Usuario
                 </button>
               </div>
             </div>
