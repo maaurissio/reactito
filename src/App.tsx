@@ -8,6 +8,7 @@ import { Catalogo } from './pages/tienda/Catalogo';
 import { Carrito } from './pages/tienda/Carrito';
 import { Login } from './pages/auth/Login';
 import { Registro } from './pages/auth/Registro';
+import { RecuperarPassword } from './pages/auth/RecuperarPassword';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Nosotros } from './pages/info/Nosotros';
 import { Blog } from './pages/info/Blog';
@@ -79,6 +80,16 @@ function App() {
             <PublicRoute>
               <MainLayout>
                 <Registro />
+              </MainLayout>
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/recuperar-password"
+          element={
+            <PublicRoute>
+              <MainLayout>
+                <RecuperarPassword />
               </MainLayout>
             </PublicRoute>
           }

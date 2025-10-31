@@ -229,3 +229,112 @@ export function cambiarPassword(userId: number, passwordActual: string, password
   actualizarUsuario(userId, { password: passwordNueva });
   return true;
 }
+
+// ============================================
+// RECUPERACIÓN DE CONTRASEÑA
+// ============================================
+
+const CLAVE_CODIGOS_RECUPERACION = 'codigos_recuperacion_huertohogar';
+
+interface CodigoRecuperacion {
+  email: string;
+  codigo: string;
+  expiracion: string;
+}
+
+function generarCodigoRecuperacion(): string {
+  // Genera un código de 6 dígitos
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export function solicitarRecuperacionPassword(email: string): { success: boolean; codigo?: string; mensaje: string } {
+  const usuario = obtenerUsuarioPorEmail(email);
+  
+  if (!usuario) {
+    return { success: false, mensaje: 'No existe una cuenta con ese correo electrónico' };
+  }
+
+  const codigo = generarCodigoRecuperacion();
+  const expiracion = new Date();
+  expiracion.setMinutes(expiracion.getMinutes() + 15); // Código válido por 15 minutos
+
+  const codigoRecuperacion: CodigoRecuperacion = {
+    email,
+    codigo,
+    expiracion: expiracion.toISOString(),
+  };
+
+  try {
+    // Obtener códigos existentes
+    const codigosExistentes = localStorage.getItem(CLAVE_CODIGOS_RECUPERACION);
+    let codigos: CodigoRecuperacion[] = codigosExistentes ? JSON.parse(codigosExistentes) : [];
+    
+    // Eliminar códigos expirados y del mismo email
+    codigos = codigos.filter(c => 
+      new Date(c.expiracion) > new Date() && c.email !== email
+    );
+    
+    // Agregar el nuevo código
+    codigos.push(codigoRecuperacion);
+    
+    localStorage.setItem(CLAVE_CODIGOS_RECUPERACION, JSON.stringify(codigos));
+    
+    // En producción, aquí enviarías un email real
+    console.log(`Código de recuperación para ${email}: ${codigo}`);
+    
+    return { 
+      success: true, 
+      codigo, // En producción, NO devolver el código en la respuesta
+      mensaje: 'Código de recuperación enviado. Revisa tu correo electrónico.' 
+    };
+  } catch (error) {
+    console.error('Error al generar código de recuperación:', error);
+    return { success: false, mensaje: 'Error al procesar la solicitud' };
+  }
+}
+
+export function verificarCodigoRecuperacion(email: string, codigo: string): boolean {
+  try {
+    const codigosExistentes = localStorage.getItem(CLAVE_CODIGOS_RECUPERACION);
+    if (!codigosExistentes) return false;
+    
+    const codigos: CodigoRecuperacion[] = JSON.parse(codigosExistentes);
+    
+    const codigoValido = codigos.find(c => 
+      c.email === email && 
+      c.codigo === codigo && 
+      new Date(c.expiracion) > new Date()
+    );
+    
+    return !!codigoValido;
+  } catch (error) {
+    console.error('Error al verificar código:', error);
+    return false;
+  }
+}
+
+export function restablecerPassword(email: string, codigo: string, nuevaPassword: string): boolean {
+  if (!verificarCodigoRecuperacion(email, codigo)) {
+    return false;
+  }
+
+  const usuario = obtenerUsuarioPorEmail(email);
+  if (!usuario) return false;
+
+  // Actualizar la contraseña
+  actualizarUsuario(usuario.id, { password: nuevaPassword });
+
+  // Eliminar el código usado
+  try {
+    const codigosExistentes = localStorage.getItem(CLAVE_CODIGOS_RECUPERACION);
+    if (codigosExistentes) {
+      let codigos: CodigoRecuperacion[] = JSON.parse(codigosExistentes);
+      codigos = codigos.filter(c => !(c.email === email && c.codigo === codigo));
+      localStorage.setItem(CLAVE_CODIGOS_RECUPERACION, JSON.stringify(codigos));
+    }
+  } catch (error) {
+    console.error('Error al eliminar código usado:', error);
+  }
+
+  return true;
+}

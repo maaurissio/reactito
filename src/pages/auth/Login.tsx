@@ -151,7 +151,7 @@ export const Login = () => {
 
                       <div className="mb-4">
                         <div className="text-center">
-                          <Link to="/olvido-contrasena" className="text-decoration-none small">
+                          <Link to="/recuperar-password" className="text-decoration-none small">
                             ¿Olvidaste tu contraseña?
                           </Link>
                         </div>
@@ -159,7 +159,13 @@ export const Login = () => {
 
                       <button 
                         type="submit" 
-                        className={`btn btn-lg w-100 mb-3 ${error ? 'btn-danger' : success ? 'btn-success' : 'btn-success'}`}
+                        className="btn btn-lg w-100 mb-3"
+                        style={{ 
+                          background: error ? '#ff3b30' : success ? 'var(--green-primary)' : 'var(--green-primary)',
+                          color: 'white',
+                          border: 'none',
+                          transition: 'all 0.3s ease'
+                        }}
                         disabled={isLoading}
                       >
                         {isLoading ? (
