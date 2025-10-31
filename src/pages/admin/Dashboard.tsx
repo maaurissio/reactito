@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useProductsStore } from '../../store/productsStore';
 import { Navigate } from 'react-router-dom';
 import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService, registrarUsuario } from '../../services/usuariosService';
-import { obtenerTodosLosPedidos, actualizarEstadoPedido, marcarPedidosComoLeidos, type IPedido } from '../../services/pedidosService';
+import { obtenerTodosLosPedidos, actualizarEstadoPedido, type IPedido } from '../../services/pedidosService';
 import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/shippingConfigService';
 import { agregarProducto } from '../../services/productosService';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -71,11 +71,6 @@ export const Dashboard = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-
-  // Estado para notificaciones de pedidos nuevos
-  const [pedidosNuevos, setPedidosNuevos] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const notificationRef = useRef<HTMLDivElement>(null);
   
   // Estados para el formulario de edición de productos
   const [formEdit, setFormEdit] = useState({
@@ -118,10 +113,6 @@ export const Dashboard = () => {
     // Cargar pedidos
     const orders = obtenerTodosLosPedidos();
     setPedidos(orders);
-
-    // Contar pedidos nuevos (no leídos)
-    const nuevos = orders.filter(p => !p.leido).length;
-    setPedidosNuevos(nuevos);
 
     // Cargar configuración de envío
     const config = obtenerConfiguracionEnvio();
@@ -664,59 +655,6 @@ export const Dashboard = () => {
     }, 3000);
   };
 
-  // Función para alternar el dropdown de notificaciones
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
-  };
-
-  // Función para marcar todas las notificaciones como leídas
-  const marcarTodasComoLeidas = () => {
-    const pedidosNoLeidos = pedidos.filter(p => !p.leido);
-    if (pedidosNoLeidos.length > 0) {
-      const ids = pedidosNoLeidos.map(p => p.id);
-      marcarPedidosComoLeidos(ids);
-      
-      // Actualizar estado
-      const pedidosActualizados = obtenerTodosLosPedidos();
-      setPedidos(pedidosActualizados);
-      setPedidosNuevos(0);
-    }
-    setShowNotifications(false);
-  };
-
-  // Función para ir a un pedido específico
-  const irAPedido = (pedidoId: string) => {
-    // Marcar como leído
-    marcarPedidosComoLeidos([pedidoId]);
-    
-    // Actualizar estado
-    const pedidosActualizados = obtenerTodosLosPedidos();
-    setPedidos(pedidosActualizados);
-    const nuevos = pedidosActualizados.filter(p => !p.leido).length;
-    setPedidosNuevos(nuevos);
-    
-    // Ir a la sección de pedidos y cerrar dropdown
-    setActiveSection('orders');
-    setShowNotifications(false);
-  };
-
-  // Cerrar dropdown al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
-      }
-    };
-
-    if (showNotifications) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifications]);
-
   // Funciones para gestión de pedidos
   const abrirModalVerPedido = (pedido: IPedido) => {
     setPedidoSeleccionado(pedido);
@@ -735,10 +673,6 @@ export const Dashboard = () => {
       if (resultado.success) {
         const pedidosActualizados = obtenerTodosLosPedidos();
         setPedidos(pedidosActualizados);
-        
-        // Actualizar contador de pedidos nuevos (solo no leídos)
-        const nuevos = pedidosActualizados.filter(p => !p.leido).length;
-        setPedidosNuevos(nuevos);
         
         setShowPedidoEditModal(false);
         setPedidoSeleccionado(null);
@@ -1142,9 +1076,11 @@ export const Dashboard = () => {
         style={{ 
           width: sidebarCollapsed ? '80px' : '250px', 
           transition: 'width 0.3s',
-          minHeight: '100vh',
+          height: '100vh',
           position: 'sticky',
-          top: 0
+          top: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden'
         }}
       >
         <div className="p-3 border-bottom border-secondary">
@@ -1228,103 +1164,7 @@ export const Dashboard = () => {
                 </a>
               </div>
               <div className="d-flex align-items-center gap-3">
-                {/* Dropdown de Notificaciones */}
-                <div className="position-relative" ref={notificationRef}>
-                  <button 
-                    className="btn btn-link position-relative"
-                    onClick={toggleNotifications}
-                    title="Ver notificaciones"
-                  >
-                    <i className="fas fa-bell"></i>
-                    {pedidosNuevos > 0 && (
-                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        {pedidosNuevos}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Dropdown de notificaciones */}
-                  {showNotifications && (
-                    <div 
-                      className="position-absolute end-0 mt-2 bg-white border rounded shadow-lg"
-                      style={{ 
-                        width: '350px', 
-                        maxHeight: '400px', 
-                        overflowY: 'auto',
-                        zIndex: 1000 
-                      }}
-                    >
-                      <div className="p-3 border-bottom d-flex justify-content-between align-items-center">
-                        <h6 className="mb-0">
-                          <i className="fas fa-bell me-2 text-success"></i>
-                          Notificaciones
-                        </h6>
-                        {pedidosNuevos > 0 && (
-                          <button 
-                            className="btn btn-sm btn-link text-success"
-                            onClick={marcarTodasComoLeidas}
-                          >
-                            Marcar todas como leídas
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="list-group list-group-flush">
-                        {pedidos.filter(p => !p.leido).length === 0 ? (
-                          <div className="p-4 text-center text-muted">
-                            <i className="fas fa-check-circle fa-2x mb-2"></i>
-                            <p className="mb-0">No hay notificaciones nuevas</p>
-                          </div>
-                        ) : (
-                          pedidos
-                            .filter(p => !p.leido)
-                            .slice(0, 10)
-                            .map(pedido => (
-                              <button
-                                key={pedido.id}
-                                className="list-group-item list-group-item-action text-start"
-                                onClick={() => irAPedido(pedido.id)}
-                              >
-                                <div className="d-flex w-100 justify-content-between align-items-start">
-                                  <div className="flex-grow-1">
-                                    <h6 className="mb-1">
-                                      <i className="fas fa-shopping-cart text-success me-2"></i>
-                                      Nuevo Pedido #{pedido.id.slice(-6)}
-                                    </h6>
-                                    <p className="mb-1 small">
-                                      {pedido.contacto.nombre} {pedido.contacto.apellido}
-                                    </p>
-                                    <p className="mb-0 small text-muted">
-                                      <i className="fas fa-dollar-sign me-1"></i>
-                                      ${pedido.total.toLocaleString('es-CL')}
-                                    </p>
-                                  </div>
-                                  <small className="text-muted">
-                                    {new Date(pedido.fecha).toLocaleDateString('es-CL')}
-                                  </small>
-                                </div>
-                              </button>
-                            ))
-                        )}
-                      </div>
-
-                      {pedidos.filter(p => !p.leido).length > 10 && (
-                        <div className="p-2 text-center border-top">
-                          <button 
-                            className="btn btn-sm btn-link text-success"
-                            onClick={() => {
-                              setActiveSection('orders');
-                              setShowNotifications(false);
-                            }}
-                          >
-                            Ver todos los pedidos
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
+                {/* Usuario logueado */}
                 <div className="d-flex align-items-center">
                   <div className="rounded-circle bg-success text-white d-flex align-items-center justify-content-center me-2" 
                        style={{ width: '35px', height: '35px' }}>

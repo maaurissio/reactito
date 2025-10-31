@@ -6,6 +6,7 @@ import { useProductsStore } from '../../store/productsStore';
 import { crearPedido } from '../../services/pedidosService';
 import { calcularCostoEnvio } from '../../services/shippingConfigService';
 import { Estado } from '../../types/models';
+import { SelectModerno } from '../../components/ui';
 
 interface RegionCiudades {
   [key: string]: string[];
@@ -30,6 +31,26 @@ const ciudadesPorRegion: RegionCiudades = {
   'magallanes': ['Punta Arenas', 'Puerto Natales', 'Porvenir']
 };
 
+// Opciones para el select de regiones
+const regionesOptions = [
+  { value: 'arica-parinacota', label: 'Arica y Parinacota' },
+  { value: 'tarapaca', label: 'Tarapacá' },
+  { value: 'antofagasta', label: 'Antofagasta' },
+  { value: 'atacama', label: 'Atacama' },
+  { value: 'coquimbo', label: 'Coquimbo' },
+  { value: 'valparaiso', label: 'Valparaíso' },
+  { value: 'metropolitana', label: 'Región Metropolitana' },
+  { value: 'ohiggins', label: "O'Higgins" },
+  { value: 'maule', label: 'Maule' },
+  { value: 'nuble', label: 'Ñuble' },
+  { value: 'bio-bio', label: 'Biobío' },
+  { value: 'araucania', label: 'La Araucanía' },
+  { value: 'los-rios', label: 'Los Ríos' },
+  { value: 'los-lagos', label: 'Los Lagos' },
+  { value: 'aysen', label: 'Aysén' },
+  { value: 'magallanes', label: 'Magallanes' }
+];
+
 export const Checkout = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
@@ -51,6 +72,12 @@ export const Checkout = () => {
   
   const [procesando, setProcesando] = useState(false);
   const [ciudadesDisponibles, setCiudadesDisponibles] = useState<string[]>([]);
+
+  // Preparar opciones de ciudades para el select moderno
+  const ciudadesOptions = ciudadesDisponibles.map(ciudad => ({
+    value: ciudad.toLowerCase().replace(/\s+/g, '-'),
+    label: ciudad
+  }));
 
   // Estados para notificación toast
   const [showToast, setShowToast] = useState(false);
@@ -239,16 +266,16 @@ export const Checkout = () => {
   };
 
   return (
-    <div className="checkout-page bg-light" style={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden' }}>
+    <div className="checkout-page bg-light" style={{ minHeight: '100vh' }}>
       {/* Header */}
-      <section className="bg-success text-white py-4">
+      <section className="bg-success text-white py-3">
         <div className="container">
           <div className="row align-items-center">
             <div className="col-md-8">
               <h2 className="mb-0" style={{ fontFamily: "'Playfair Display', serif", color: '#ffffff' }}>
-                <i className="fas fa-shopping-cart me-3"></i>Finalizar Compra
+                <i className="fas fa-shopping-cart me-2"></i>Finalizar Compra
               </h2>
-              <p className="mb-0 mt-2">Completa tu pedido de productos frescos y naturales</p>
+              <p className="mb-0 mt-1 small">Completa tu pedido de productos frescos y naturales</p>
             </div>
             <div className="col-md-4 text-end">
               <div className="d-flex align-items-center justify-content-end">
@@ -261,22 +288,22 @@ export const Checkout = () => {
       </section>
 
       {/* Contenido */}
-      <section className="py-3" style={{ maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
+      <section className="py-3">
         <div className="container">
-          <div className="row">
+          <div className="row g-3">
             {/* Columna izquierda - Formularios */}
             <div className="col-lg-8">
               
               {/* Paso 1: Tipo de compra */}
               {paso === 'tipo' && (
-                <div className="card shadow-sm mb-4">
-                  <div className="card-header bg-light">
+                <div className="card shadow-sm mb-3">
+                  <div className="card-header bg-light py-2">
                     <h5 className="mb-0">
                       <i className="fas fa-user-circle me-2 text-success"></i>
                       Paso 1: ¿Cómo deseas realizar tu compra?
                     </h5>
                   </div>
-                  <div className="card-body">
+                  <div className="card-body p-3">
                     
                     {/* Usuario logueado */}
                     {isAuthenticated ? (
@@ -360,19 +387,19 @@ export const Checkout = () => {
 
               {/* Paso 2: Formulario de contacto y envío */}
               {paso === 'formulario' && (
-                <div className="card shadow-sm mb-4">
-                  <div className="card-header bg-light">
+                <div className="card shadow-sm mb-3">
+                  <div className="card-header bg-light py-2">
                     <h5 className="mb-0">
                       <i className="fas fa-address-card me-2 text-success"></i>
                       Paso 2: Datos de contacto y envío
                     </h5>
                   </div>
-                  <div className="card-body">
+                  <div className="card-body p-3">
                     <form onSubmit={(e) => { e.preventDefault(); procesarPedido(); }}>
-                      <div className="row g-3">
+                      <div className="row g-2">
                         {/* Datos personales */}
-                        <div className="col-12">
-                          <h6 className="text-success mb-3">
+                        <div className="col-12 mt-2">
+                          <h6 className="text-success mb-2">
                             <i className="fas fa-user me-2"></i>Información personal
                           </h6>
                         </div>
@@ -428,8 +455,8 @@ export const Checkout = () => {
                         </div>
 
                         {/* Datos de envío */}
-                        <div className="col-12 mt-4">
-                          <h6 className="text-success mb-3">
+                        <div className="col-12 mt-2">
+                          <h6 className="text-success mb-2">
                             <i className="fas fa-truck me-2"></i>Dirección de envío
                           </h6>
                         </div>
@@ -446,50 +473,25 @@ export const Checkout = () => {
                           />
                         </div>
                         <div className="col-md-4">
-                          <label htmlFor="region" className="form-label">Región *</label>
-                          <select
-                            className="form-select"
-                            id="region"
+                          <SelectModerno
+                            label="Región"
                             value={region}
-                            onChange={(e) => setRegion(e.target.value)}
+                            onChange={setRegion}
+                            options={regionesOptions}
+                            placeholder="Seleccionar región"
                             required
-                          >
-                            <option value="">Seleccionar región</option>
-                            <option value="arica-parinacota">Arica y Parinacota</option>
-                            <option value="tarapaca">Tarapacá</option>
-                            <option value="antofagasta">Antofagasta</option>
-                            <option value="atacama">Atacama</option>
-                            <option value="coquimbo">Coquimbo</option>
-                            <option value="valparaiso">Valparaíso</option>
-                            <option value="metropolitana">Región Metropolitana</option>
-                            <option value="ohiggins">O'Higgins</option>
-                            <option value="maule">Maule</option>
-                            <option value="nuble">Ñuble</option>
-                            <option value="bio-bio">Biobío</option>
-                            <option value="araucania">La Araucanía</option>
-                            <option value="los-rios">Los Ríos</option>
-                            <option value="los-lagos">Los Lagos</option>
-                            <option value="aysen">Aysén</option>
-                            <option value="magallanes">Magallanes</option>
-                          </select>
+                          />
                         </div>
                         <div className="col-md-4">
-                          <label htmlFor="ciudad" className="form-label">Ciudad *</label>
-                          <select
-                            className="form-select"
-                            id="ciudad"
+                          <SelectModerno
+                            label="Ciudad"
                             value={ciudad}
-                            onChange={(e) => setCiudad(e.target.value)}
+                            onChange={setCiudad}
+                            options={ciudadesOptions}
+                            placeholder={region ? 'Selecciona tu ciudad' : 'Primero selecciona una región'}
                             disabled={!region}
                             required
-                          >
-                            <option value="">
-                              {region ? 'Selecciona tu ciudad' : 'Primero selecciona una región'}
-                            </option>
-                            {ciudadesDisponibles.map(c => (
-                              <option key={c} value={c.toLowerCase().replace(/\s+/g, '-')}>{c}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
                         <div className="col-md-4">
                           <label htmlFor="codigoPostal" className="form-label">Código postal</label>
@@ -516,7 +518,7 @@ export const Checkout = () => {
                         </div>
                       </div>
 
-                      <div className="mt-4">
+                      <div className="mt-3">
                         <button type="submit" className="btn btn-success btn-lg" disabled={procesando}>
                           {procesando ? (
                             <>
@@ -545,13 +547,13 @@ export const Checkout = () => {
 
             {/* Columna derecha - Resumen del pedido */}
             <div className="col-lg-4">
-              <div className="card shadow-sm sticky-top" style={{ top: '20px' }}>
-                <div className="card-header bg-success text-white">
-                  <h5 className="mb-0">
+              <div className="card shadow-sm" style={{ overflow: 'hidden' }}>
+                <div className="card-header bg-white border-bottom p-3">
+                  <h5 className="mb-0 text-success">
                     <i className="fas fa-receipt me-2"></i>Resumen del pedido
                   </h5>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-3" style={{ maxHeight: '450px', overflowY: 'auto' }}>
                   {items.map(item => (
                     <div key={item.id} className="d-flex justify-content-between align-items-center py-2 border-bottom">
                       <div className="flex-grow-1">
@@ -567,13 +569,13 @@ export const Checkout = () => {
                   ))}
 
                   {/* Envío */}
-                  <div className="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <div className="d-flex justify-content-between align-items-center py-2">
                     <div className="flex-grow-1">
                       <h6 className={`mb-0 small ${calcularCostoEnvioActual() === 0 ? 'text-success' : 'text-dark'}`}>
                         <i className="fas fa-truck me-1"></i>Envío
                       </h6>
                       <small className="text-muted">
-                        {calcularCostoEnvioActual() === 0 ? 'Envío gratis aplicado' : 'Se aplica costo de envío'}
+                        {calcularCostoEnvioActual() === 0 ? 'Envío gratis' : 'Costo de envío'}
                       </small>
                     </div>
                     <div className="text-end">
@@ -585,25 +587,14 @@ export const Checkout = () => {
                     </div>
                   </div>
                 </div>
-                <div className="card-footer bg-light">
-                  <div className="d-flex justify-content-between align-items-center">
+                <div className="card-footer bg-light py-3 px-3">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
                     <strong className="text-success">Total a pagar:</strong>
                     <strong className="fs-5 text-success">${calcularTotal().toLocaleString('es-CL')}</strong>
                   </div>
-                  <small className="text-muted">
-                    <i className="fas fa-truck me-1"></i>Envío incluido
+                  <small className="text-muted d-flex align-items-center">
+                    <i className="fas fa-shield-alt me-1"></i>Compra segura y protegida
                   </small>
-                </div>
-              </div>
-
-              {/* Información de seguridad */}
-              <div className="card shadow-sm mt-3">
-                <div className="card-body text-center">
-                  <i className="fas fa-shield-alt text-success fs-2 mb-2"></i>
-                  <h6 className="text-success">Compra segura</h6>
-                  <p className="small text-muted mb-0">
-                    Tus datos están protegidos
-                  </p>
                 </div>
               </div>
             </div>

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export const Footer = () => {
   return (
-    <footer className="bg-dark text-white pt-5 pb-3">
+    <footer className="bg-dark text-white pt-4 pb-2">
       <div className="container">
         <div className="row g-4">
           {/* Información de la empresa */}
