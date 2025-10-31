@@ -66,8 +66,6 @@ function normalizarProducto(producto: Partial<IProducto>): IProducto {
     }
   }
   
-  console.log('Normalizando producto - imagen original:', producto.imagen?.substring(0, 50), 'imagen final:', imagenFinal.substring(0, 50));
-  
   return {
     id: producto.id ?? 0,
     codigo: producto.codigo ?? `PR${Date.now()}`,

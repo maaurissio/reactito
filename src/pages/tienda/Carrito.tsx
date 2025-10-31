@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store';
-import { Button } from '../../components/ui';
 
 export const Carrito = () => {
   const navigate = useNavigate();
@@ -34,7 +33,12 @@ export const Carrito = () => {
         <div className="carrito-items">
           {items.map((item) => (
             <div key={item.id} className="carrito-item">
-              <img src={item.producto.imagen} alt={item.producto.nombre} />
+              <img
+                src={item.producto.imagen}
+                alt={item.producto.nombre}
+                loading="lazy"
+                decoding="async"
+              />
               
               <div className="item-info">
                 <h3>{item.producto.nombre}</h3>
@@ -97,23 +101,21 @@ export const Carrito = () => {
             <span>${total.toLocaleString('es-CL')}</span>
           </div>
 
-          <Button
-            variant="success"
-            size="lg"
-            fullWidth
+          <button
+            type="button"
+            className="btn btn-success btn-lg btn-full-width"
             onClick={handleCheckout}
           >
             Proceder al Pago
-          </Button>
+          </button>
 
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
+          <button
+            type="button"
+            className="btn btn-secondary btn-full-width"
             onClick={limpiarCarrito}
           >
             Vaciar Carrito
-          </Button>
+          </button>
 
           <Link to="/catalogo" className="continue-shopping">
             ← Continuar Comprando

@@ -1,62 +1,76 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProductsStore, useCartStore } from '../../store';
 import type { IProducto } from '../../types';
 import { Estado } from '../../types/models';
 
-export const Catalogo = () => {
-  const {
-    productos,
-    cargarProductos,
-  } = useProductsStore();
+const CATEGORIAS = [
+  { id: 'Frutas Frescas', icon: '🍎', label: 'Frutas Frescas' },
+  { id: 'Verduras Orgánicas', icon: '🥬', label: 'Verduras Orgánicas' },
+  { id: 'Productos Orgánicos', icon: '🌱', label: 'Productos Orgánicos' },
+  { id: 'Productos Lácteos', icon: '🥛', label: 'Productos Lácteos' },
+] as const;
 
-  const { agregarItem } = useCartStore();
+export const Catalogo = () => {
+  const productos = useProductsStore((state) => state.productos);
+  const cargarProductos = useProductsStore((state) => state.cargarProductos);
+  const agregarItem = useCartStore((state) => state.agregarItem);
   
   const [searchInput, setSearchInput] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState<string>('todos');
-  const [productosFiltrados, setProductosFiltrados] = useState<IProducto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [productoAgregado, setProductoAgregado] = useState<IProducto | null>(null);
+  const closeToastTimeout = useRef<number | null>(null);
+
+  const priceFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP',
+        minimumFractionDigits: 0,
+      }),
+    []
+  );
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await cargarProductos();
-      setIsLoading(false);
+      try {
+        await Promise.resolve(cargarProductos());
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadData();
   }, [cargarProductos]);
 
-  // Aplicar filtros cuando cambien los productos, búsqueda o categoría
   useEffect(() => {
-    aplicarFiltros();
-  }, [productos, searchInput, categoriaActiva]);
+    return () => {
+      if (closeToastTimeout.current) {
+        window.clearTimeout(closeToastTimeout.current);
+      }
+    };
+  }, []);
 
-  const aplicarFiltros = () => {
-    let filtrados = [...productos];
+  const productosFiltrados = useMemo(() => {
+    const activos = productos.filter((producto) => producto.isActivo === Estado.activo);
 
-    // Filtrar solo productos activos
-    filtrados = filtrados.filter(producto => producto.isActivo === Estado.activo);
+    const porCategoria =
+      categoriaActiva && categoriaActiva !== 'todos'
+        ? activos.filter((producto) => producto.categoria === categoriaActiva)
+        : activos;
 
-    // Filtrar por categoría
-    if (categoriaActiva && categoriaActiva !== 'todos') {
-      filtrados = filtrados.filter(producto => 
-        producto.categoria === categoriaActiva
-      );
+    if (!searchInput.trim()) {
+      return porCategoria;
     }
 
-    // Filtrar por búsqueda
-    if (searchInput.trim()) {
-      const busqueda = searchInput.toLowerCase();
-      filtrados = filtrados.filter(producto =>
-        producto.nombre.toLowerCase().includes(busqueda) ||
-        producto.descripcion.toLowerCase().includes(busqueda) ||
-        producto.categoria.toLowerCase().includes(busqueda)
-      );
-    }
-
-    setProductosFiltrados(filtrados);
-  };
+    const busqueda = searchInput.toLowerCase();
+    return porCategoria.filter((producto) =>
+      producto.nombre.toLowerCase().includes(busqueda) ||
+      producto.descripcion.toLowerCase().includes(busqueda) ||
+      producto.categoria.toLowerCase().includes(busqueda)
+    );
+  }, [productos, categoriaActiva, searchInput]);
 
   const handleCategoryClick = (categoria: string) => {
     if (categoriaActiva === categoria) {
@@ -70,19 +84,19 @@ export const Catalogo = () => {
     agregarItem(producto, 1);
     setProductoAgregado(producto);
     setShowModal(true);
-    
-    // Auto-cerrar la notificación después de 3 segundos
-    setTimeout(() => {
+
+    if (closeToastTimeout.current) {
+      window.clearTimeout(closeToastTimeout.current);
+    }
+
+    closeToastTimeout.current = window.setTimeout(() => {
       setShowModal(false);
+      closeToastTimeout.current = null;
     }, 3000);
   };
 
   const formatearPrecio = (precio: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0
-    }).format(precio);
+    return priceFormatter.format(precio);
   };
 
   const getStockClass = (stock: number) => {
@@ -133,7 +147,7 @@ export const Catalogo = () => {
                 <input 
                   type="text" 
                   className="form-control form-control-lg border-0 shadow-sm rounded-pill ps-5" 
-                  placeholder="🔍 Buscar productos frescos..." 
+                  placeholder="Buscar productos frescos..." 
                   style={{ boxShadow: '0 8px 25px rgba(46, 139, 87, 0.15)', height: '60px', fontSize: '1.1rem' }}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
@@ -148,38 +162,17 @@ export const Catalogo = () => {
             <div className="col-lg-10">
               <h5 className="text-center text-muted mb-4 fw-medium">Explora por categorías</h5>
               <div className="d-flex flex-wrap justify-content-center gap-3">
-                <button 
-                  className={`btn btn-outline-success rounded-pill px-4 py-3 border-2 category-btn ${categoriaActiva === 'Frutas Frescas' ? 'active' : ''}`}
-                  onClick={() => handleCategoryClick('Frutas Frescas')}
-                  style={{ minWidth: '160px' }}
-                >
-                  <span className="fs-4 me-2">🍎</span>
-                  <span className="fw-medium">Frutas Frescas</span>
-                </button>
-                <button 
-                  className={`btn btn-outline-success rounded-pill px-4 py-3 border-2 category-btn ${categoriaActiva === 'Verduras Orgánicas' ? 'active' : ''}`}
-                  onClick={() => handleCategoryClick('Verduras Orgánicas')}
-                  style={{ minWidth: '160px' }}
-                >
-                  <span className="fs-4 me-2">🥬</span>
-                  <span className="fw-medium">Verduras Orgánicas</span>
-                </button>
-                <button 
-                  className={`btn btn-outline-success rounded-pill px-4 py-3 border-2 category-btn ${categoriaActiva === 'Productos Orgánicos' ? 'active' : ''}`}
-                  onClick={() => handleCategoryClick('Productos Orgánicos')}
-                  style={{ minWidth: '160px' }}
-                >
-                  <span className="fs-4 me-2">🌱</span>
-                  <span className="fw-medium">Productos Orgánicos</span>
-                </button>
-                <button 
-                  className={`btn btn-outline-success rounded-pill px-4 py-3 border-2 category-btn ${categoriaActiva === 'Productos Lácteos' ? 'active' : ''}`}
-                  onClick={() => handleCategoryClick('Productos Lácteos')}
-                  style={{ minWidth: '160px' }}
-                >
-                  <span className="fs-4 me-2">🥛</span>
-                  <span className="fw-medium">Productos Lácteos</span>
-                </button>
+                {CATEGORIAS.map(({ id, icon, label }) => (
+                  <button
+                    key={id}
+                    className={`btn btn-outline-success rounded-pill px-4 py-3 border-2 category-btn ${categoriaActiva === id ? 'active' : ''}`}
+                    onClick={() => handleCategoryClick(id)}
+                    style={{ minWidth: '160px' }}
+                  >
+                    <span className="fs-4 me-2">{icon}</span>
+                    <span className="fw-medium">{label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -219,6 +212,8 @@ export const Catalogo = () => {
                       className="card-img-top" 
                       alt={producto.nombre}
                       onError={(e) => { e.currentTarget.src = '/img/default.jpg'; }}
+                      loading="lazy"
+                      decoding="async"
                       style={{ height: '300px', objectFit: 'cover', width: '100%' }}
                     />
                     <div className="card-body d-flex flex-column flex-grow-1">

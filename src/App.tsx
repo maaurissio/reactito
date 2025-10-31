@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { MainLayout } from './components/layout';
+import { MainLayout, ScrollToTop } from './components/layout';
 import { ProtectedRoute, PublicRoute } from './routes';
 
 // Pages
@@ -20,6 +20,7 @@ import { Boleta } from './pages/usuario/Boleta';
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Rutas públicas con layout */}
         <Route
