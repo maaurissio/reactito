@@ -63,7 +63,10 @@ export const Blog = () => {
     <main className="blog-page">
       {/* Hero Section */}
       <section className="hero-section position-relative overflow-hidden py-5" style={{ 
-        background: 'linear-gradient(135deg, #2f9e44 0%, #51cf66 100%)'
+        backgroundImage: 'url(/img/lechugas.webp)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
       }}>
         <div className="container text-center">
           <div className="row justify-content-center">

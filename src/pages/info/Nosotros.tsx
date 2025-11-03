@@ -358,10 +358,7 @@ export const Nosotros = () => {
                 <div className="text-center">
                   <i className="fas fa-map text-success fs-1 opacity-75 mb-3"></i>
                   <h6 className="fw-semibold mb-2">¿Tu ciudad no está?</h6>
-                  <p className="text-muted small mb-3">Pronto llegaremos a más ubicaciones</p>
-                  <Link to="/catalogo" className="btn btn-outline-success btn-sm">
-                    Ver cobertura
-                  </Link>
+                  <p className="text-muted small mb-3">Proximamente llegaremos a más ubicaciones</p>
                 </div>
               </div>
             </div>

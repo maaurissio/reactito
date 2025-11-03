@@ -29,10 +29,8 @@ export const SelectModerno = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Obtener label del valor seleccionado
   const selectedLabel = options.find(opt => opt.value === value)?.label || placeholder;
 
-  // Cerrar dropdown al hacer click afuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {

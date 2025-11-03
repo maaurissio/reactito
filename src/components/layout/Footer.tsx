@@ -5,13 +5,12 @@ export const Footer = () => {
     <footer className="bg-dark text-white pt-4 pb-2">
       <div className="container">
         <div className="row g-4">
-          {/* Información de la empresa */}
           <div className="col-lg-4 col-md-6">
             <div className="d-flex align-items-center mb-3">
               <i className="fas fa-seedling text-success me-2 fs-4"></i>
               <h5 className="mb-0 text-success fw-bold">HuertoHogar</h5>
             </div>
-            <p className="text-light text-decoration-none footer-link mb-3">
+            <p className="text-light text-decoration-none mb-3">
               Conectamos el campo chileno con tu hogar. Productos frescos, naturales y de calidad directamente a tu mesa.
             </p>
             <div className="d-flex gap-3">
@@ -29,8 +28,6 @@ export const Footer = () => {
               </a>
             </div>
           </div>
-
-          {/* Enlaces útiles */}
           <div className="col-lg-2 col-md-6">
             <h6 className="text-success mb-3">
               <i className="fas fa-link me-2"></i>Enlaces Útiles
@@ -54,7 +51,6 @@ export const Footer = () => {
             </ul>
           </div>
 
-          {/* Información de contacto */}
           <div className="col-lg-3 col-md-6">
             <h6 className="text-success mb-3">
               <i className="fas fa-phone me-2"></i>Contacto
@@ -70,16 +66,15 @@ export const Footer = () => {
               </li>
               <li className="mb-2 d-flex align-items-center">
                 <i className="fas fa-clock me-2 text-success"></i>
-                <span className="text-light">Lun-Vie 9:00-18:00</span>
+                <span className="text-light">Lun-Lun 9:00-18:00</span>
               </li>
               <li className="mb-2 d-flex align-items-center">
                 <i className="fas fa-map-marker-alt me-2 text-success"></i>
-                <span className="text-light">Santiago, Chile</span>
+                <span className="text-light">Coronel, Chile</span>
               </li>
             </ul>
           </div>
 
-          {/* Certificaciones y garantías */}
           <div className="col-lg-3 col-md-6">
             <h6 className="text-success mb-3">
               <i className="fas fa-certificate me-2"></i>Garantías
@@ -113,7 +108,6 @@ export const Footer = () => {
           </div>
         </div>
 
-        {/* Línea separadora */}
         <hr className="my-4 border-secondary" />
 
         {/* Copyright y enlaces legales */}
@@ -123,19 +117,6 @@ export const Footer = () => {
               <i className="fas fa-copyright me-1 text-success"></i>
               2025 HuertoHogar - Todos los derechos reservados
             </p>
-          </div>
-          <div className="col-md-6">
-            <div className="d-flex justify-content-center justify-content-md-end gap-3">
-              <Link to="/terminos" className="text-light text-decoration-none footer-link small">
-                <i className="fas fa-file-contract me-1 text-success"></i>Términos de Uso
-              </Link>
-              <Link to="/privacidad" className="text-light text-decoration-none footer-link small">
-                <i className="fas fa-user-shield me-1 text-success"></i>Privacidad
-              </Link>
-              <Link to="/cookies" className="text-light text-decoration-none footer-link small">
-                <i className="fas fa-cookie-bite me-1 text-success"></i>Cookies
-              </Link>
-            </div>
           </div>
         </div>
       </div>

@@ -233,10 +233,6 @@ export const Home = () => {
                     <i className="fas fa-map-marker-alt text-success me-2"></i>
                     <span>Concepción</span>
                   </div>
-                  <small className="text-muted">
-                    <i className="fas fa-plus-circle me-1"></i>
-                    Próximamente más ubicaciones
-                  </small>
                 </div>
               </div>
             </div>
@@ -260,6 +256,10 @@ export const Home = () => {
                     <i className="fas fa-map-marker-alt text-success me-2"></i>
                     <span>Villarrica</span>
                   </div>
+                  <small className="text-muted">
+                    <i className="fas fa-plus-circle me-1"></i>
+                    Próximamente más ubicaciones
+                  </small>
                 </div>
               </div>
             </div>
