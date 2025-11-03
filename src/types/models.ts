@@ -36,6 +36,18 @@ export interface IProducto {
   fechaCreacion?: string;
   fechaActualizacion?: string;
   peso?: string;
+  resenas?: IResena[];
+}
+
+export interface IResena {
+  id: string;
+  productoId: number;
+  usuarioId: number;
+  usuarioNombre: string;
+  usuarioAvatar?: string;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
 }
 
 export interface IProductoConfiguracion {

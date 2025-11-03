@@ -5,6 +5,7 @@ import { ProtectedRoute, PublicRoute } from './routes';
 // Pages
 import { Home } from './pages/Home.tsx';
 import { Catalogo } from './pages/tienda/Catalogo';
+import { DetalleProducto } from './pages/tienda/DetalleProducto';
 import { Carrito } from './pages/tienda/Carrito';
 import { Login } from './pages/auth/Login';
 import { Registro } from './pages/auth/Registro';
@@ -36,6 +37,14 @@ function App() {
           element={
             <MainLayout>
               <Catalogo />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/producto/:id"
+          element={
+            <MainLayout>
+              <DetalleProducto />
             </MainLayout>
           }
         />

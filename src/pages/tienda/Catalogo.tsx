@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProductsStore, useCartStore } from '../../store';
+import { useNavigate } from 'react-router-dom';
 import type { IProducto } from '../../types';
 import { Estado } from '../../types/models';
 
@@ -11,6 +12,7 @@ const CATEGORIAS = [
 ] as const;
 
 export const Catalogo = () => {
+  const navigate = useNavigate();
   const productos = useProductsStore((state) => state.productos);
   const cargarProductos = useProductsStore((state) => state.cargarProductos);
   const agregarItem = useCartStore((state) => state.agregarItem);
@@ -93,6 +95,10 @@ export const Catalogo = () => {
       setShowModal(false);
       closeToastTimeout.current = null;
     }, 3000);
+  };
+
+  const handleProductClick = (productoId: number) => {
+    navigate(`/producto/${productoId}`);
   };
 
   const formatearPrecio = (precio: number) => {
@@ -201,23 +207,34 @@ export const Catalogo = () => {
               productosFiltrados.map((producto) => (
                 <div key={producto.id} className="col-12 col-sm-6 col-md-4 col-lg-3 product-col">
                   <div className="card product-card shadow-sm h-100 d-flex flex-column">
-                    <img 
-                      src={
-                        producto.imagen.startsWith('data:') 
-                          ? producto.imagen 
-                          : producto.imagen.startsWith('img/') 
-                            ? `/${producto.imagen}` 
-                            : producto.imagen
-                      } 
-                      className="card-img-top" 
-                      alt={producto.nombre}
-                      onError={(e) => { e.currentTarget.src = '/img/default.jpg'; }}
-                      loading="lazy"
-                      decoding="async"
-                      style={{ height: '300px', objectFit: 'cover', width: '100%' }}
-                    />
+                    <div 
+                      onClick={() => handleProductClick(producto.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <img 
+                        src={
+                          producto.imagen.startsWith('data:') 
+                            ? producto.imagen 
+                            : producto.imagen.startsWith('img/') 
+                              ? `/${producto.imagen}` 
+                              : producto.imagen
+                        } 
+                        className="card-img-top" 
+                        alt={producto.nombre}
+                        onError={(e) => { e.currentTarget.src = '/img/default.jpg'; }}
+                        loading="lazy"
+                        decoding="async"
+                        style={{ height: '300px', objectFit: 'cover', width: '100%' }}
+                      />
+                    </div>
                     <div className="card-body d-flex flex-column flex-grow-1">
-                      <h5 className="card-title">PR{String(producto.id).padStart(3, '0')} - {producto.nombre}</h5>
+                      <h5 
+                        className="card-title" 
+                        onClick={() => handleProductClick(producto.id)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        PR{String(producto.id).padStart(3, '0')} - {producto.nombre}
+                      </h5>
                       <p className="card-text flex-grow-1" style={{ fontSize: '0.9rem', color: '#6c757d', lineHeight: '1.4' }}>
                         {producto.descripcion}
                       </p>
@@ -247,15 +264,25 @@ export const Catalogo = () => {
                           </div>
                         )}
                         
-                        <button 
-                          className="btn btn-success w-100 add-to-cart-btn" 
-                          onClick={() => handleAddToCart(producto)}
-                          disabled={producto.stock === 0}
-                          style={{ borderRadius: '6px', fontWeight: 500, transition: 'all 0.2s ease' }}
-                        >
-                          <i className="fas fa-shopping-cart me-1"></i>
-                          {producto.stock === 0 ? 'Agotado' : 'Agregar al carrito'}
-                        </button>
+                        <div className="d-grid gap-2">
+                          <button 
+                            className="btn btn-success w-100 add-to-cart-btn" 
+                            onClick={() => handleAddToCart(producto)}
+                            disabled={producto.stock === 0}
+                            style={{ borderRadius: '6px', fontWeight: 500, transition: 'all 0.2s ease' }}
+                          >
+                            <i className="fas fa-shopping-cart me-1"></i>
+                            {producto.stock === 0 ? 'Agotado' : 'Agregar al carrito'}
+                          </button>
+                          <button 
+                            className="btn btn-outline-success w-100" 
+                            onClick={() => handleProductClick(producto.id)}
+                            style={{ borderRadius: '6px', fontWeight: 500 }}
+                          >
+                            <i className="fas fa-eye me-1"></i>
+                            Ver Detalles
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
