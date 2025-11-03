@@ -9,6 +9,6 @@ en  más  de  9  puntos  a  lo  largo  del  país,  incluyendo  ciudades  clave 
 Villarica,  Nacimiento,  Viña  del  Mar,  Valparaíso,  y  Concepción.  Nuestra  misión  es  conectar  a  las 
 familias chilenas con el campo, promoviendo un estilo de vida saludable y sostenible.
 
-## Integrantes
+## LOS MAS BRIJIDOS:
 - Mauricio Gajardo
 - Vicente Colicheo
