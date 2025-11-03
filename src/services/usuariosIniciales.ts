@@ -29,6 +29,7 @@ export const usuariosIniciales: IUsuario[] = [
     fechaRegistro: '2025-01-01',
     telefono: '945678912',
     direccion: 'mi casa',
+    avatar: 'img/pablo.jpg'
   },
   {
     id: 3,
