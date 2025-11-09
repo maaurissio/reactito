@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { solicitarRecuperacionPassword, verificarCodigoRecuperacion, restablecerPassword } from '../../services/usuariosService';
+import { solicitarRecuperacionPassword, verificarCodigoRecuperacion, restablecerPassword } from '../../services/usuarios.service';
 
 enum Paso {
   EMAIL = 1,

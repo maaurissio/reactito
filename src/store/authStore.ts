@@ -7,7 +7,7 @@ import {
   obtenerSesionActiva,
   esAdministrador as checkAdmin,
   registrarUsuario,
-} from '../services/usuariosService';
+} from '../services/usuarios.service';
 import { RolUsuario } from '../types';
 
 interface AuthState {

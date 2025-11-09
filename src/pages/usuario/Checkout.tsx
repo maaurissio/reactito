@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
 import { useProductsStore } from '../../store/productsStore';
-import { crearPedido } from '../../services/pedidosService';
-import { calcularCostoEnvio } from '../../services/shippingConfigService';
+import { crearPedido } from '../../services/pedidos.service';
+import { calcularCostoEnvio } from '../../services/shippingConfig.service';
 import { Estado } from '../../types/models';
 import { SelectModerno } from '../../components/ui';
 

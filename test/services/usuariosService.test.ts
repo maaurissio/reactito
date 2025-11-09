@@ -6,7 +6,7 @@ import {
   registrarUsuario,
   obtenerUsuarioPorEmail,
   resetearUsuarios
-} from '../../src/services/usuariosService';
+} from '../../src/services/usuarios.service';
 
 describe('Prueba de servicio de autenticación', () => {
   

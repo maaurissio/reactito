@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from 'vitest';
 import { useAuthStore } from '../../src/store/authStore';
-import { resetearUsuarios } from '../../src/services/usuariosService';
+import { resetearUsuarios } from '../../src/services/usuarios.service';
 
 describe('Prueba del store de autenticación (authStore)', () => {
   

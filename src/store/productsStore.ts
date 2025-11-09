@@ -6,7 +6,7 @@ import {
   agregarProducto as addProductService,
   actualizarProducto as updateProductService,
   eliminarProducto as deleteProductService,
-} from '../services/productosService';
+} from '../services/productos.service';
 
 interface ProductsState {
   productos: IProducto[];

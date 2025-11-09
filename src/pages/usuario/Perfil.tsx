@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId } from '../../services/usuariosService';
+import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId } from '../../services/usuarios.service';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { obtenerPedidosUsuario, type IPedido } from '../../services/pedidosService';
+import { obtenerPedidosUsuario, type IPedido } from '../../services/pedidos.service';
 
 export const Perfil = () => {
   const { user, isAuthenticated, checkAuth } = useAuthStore();
