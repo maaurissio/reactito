@@ -88,7 +88,7 @@ export const Dashboard = () => {
     descripcion: '',
     precio: 0,
     stock: 0,
-    categoria: 'verduras',
+    categoria: 'Frutas Frescas',
     imagen: ''
   });
   const [imagenPreview, setImagenPreview] = useState('');
@@ -390,7 +390,7 @@ export const Dashboard = () => {
       descripcion: '',
       precio: 0,
       stock: 0,
-      categoria: 'verduras',
+      categoria: 'Frutas Frescas',
       imagen: ''
     });
     setImagenPreview('');
@@ -457,7 +457,7 @@ export const Dashboard = () => {
         descripcion: '',
         precio: 0,
         stock: 0,
-        categoria: 'verduras',
+        categoria: 'Frutas Frescas',
         imagen: ''
       });
       setImagenPreview('');
@@ -1320,13 +1320,11 @@ export const Dashboard = () => {
                       value={formAdd.categoria}
                       onChange={(e) => setFormAdd({...formAdd, categoria: e.target.value})}
                     >
-                      <option value="frutas">Frutas</option>
-                      <option value="verduras">Verduras</option>
-                      <option value="lacteos">Lácteos</option>
-                      <option value="carnes">Carnes</option>
-                      <option value="panaderia">Panadería</option>
-                      <option value="bebidas">Bebidas</option>
-                      <option value="abarrotes">Abarrotes</option>
+                      <option value="">Seleccionar categoría</option>
+                      <option value="Frutas Frescas">Frutas Frescas</option>
+                      <option value="Verduras Orgánicas">Verduras Orgánicas</option>
+                      <option value="Productos Orgánicos">Productos Orgánicos</option>
+                      <option value="Productos Lácteos">Productos Lácteos</option>
                     </select>
                   </div>
                   <div className="col-12">
@@ -1508,13 +1506,11 @@ export const Dashboard = () => {
                       value={formEdit.categoria}
                       onChange={(e) => setFormEdit({...formEdit, categoria: e.target.value})}
                     >
-                      <option value="frutas">Frutas</option>
-                      <option value="verduras">Verduras</option>
-                      <option value="lacteos">Lácteos</option>
-                      <option value="carnes">Carnes</option>
-                      <option value="panaderia">Panadería</option>
-                      <option value="bebidas">Bebidas</option>
-                      <option value="abarrotes">Abarrotes</option>
+                      <option value="">Seleccionar categoría</option>
+                      <option value="Frutas Frescas">Frutas Frescas</option>
+                      <option value="Verduras Orgánicas">Verduras Orgánicas</option>
+                      <option value="Productos Orgánicos">Productos Orgánicos</option>
+                      <option value="Productos Lácteos">Productos Lácteos</option>
                     </select>
                   </div>
                   <div className="col-12">

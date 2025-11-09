@@ -6,7 +6,15 @@ import {
   agregarProducto as addProductService,
   actualizarProducto as updateProductService,
   eliminarProducto as deleteProductService,
+  migrarCodigosProductos,
 } from '../services/productos.service';
+
+// Ejecutar migración de códigos una sola vez
+const CLAVE_MIGRACION = 'productos_codigos_migrados_v1';
+if (!localStorage.getItem(CLAVE_MIGRACION)) {
+  migrarCodigosProductos();
+  localStorage.setItem(CLAVE_MIGRACION, 'true');
+}
 
 interface ProductsState {
   productos: IProducto[];

@@ -233,7 +233,7 @@ export const Catalogo = () => {
                         onClick={() => handleProductClick(producto.id)}
                         style={{ cursor: 'pointer' }}
                       >
-                        PR{String(producto.id).padStart(3, '0')} - {producto.nombre}
+                        {producto.codigo} - {producto.nombre}
                       </h5>
                       <p className="card-text flex-grow-1" style={{ fontSize: '0.9rem', color: '#6c757d', lineHeight: '1.4' }}>
                         {producto.descripcion}

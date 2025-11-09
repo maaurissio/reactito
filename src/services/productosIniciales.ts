@@ -4,7 +4,7 @@ import type { IProducto } from '../types';
 export const productosIniciales: IProducto[] = [
   {
     id: 1,
-    codigo: 'MANZ-FUJI-001',
+    codigo: 'FR001',
     nombre: 'Manzanas Fuji',
     descripcion: 'Manzanas Fuji dulces y crujientes, cultivadas sin pesticidas. Ideales para toda la familia.',
     precio: 3200,
@@ -17,7 +17,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 2,
-    codigo: 'NARA-VALE-002',
+    codigo: 'FR002',
     nombre: 'Naranjas Valencia',
     descripcion: 'Naranjas valencianas llenas de vitamina C. Perfectas para zumos frescos y postres naturales.',
     precio: 2800,
@@ -30,7 +30,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 3,
-    codigo: 'PLAT-CAVE-003',
+    codigo: 'FR003',
     nombre: 'Plátanos Cavendish',
     descripcion: 'Plátanos Cavendish dulces y nutritivos, ricos en potasio. Perfectos para desayunos y meriendas saludables.',
     precio: 2200,
@@ -43,7 +43,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 4,
-    codigo: 'ZANA-ORG-004',
+    codigo: 'VR001',
     nombre: 'Zanahorias Orgánicas',
     descripcion: 'Zanahorias orgánicas dulces y crujientes, ricas en betacaroteno. Excelentes para jugos y ensaladas.',
     precio: 2100,
@@ -56,7 +56,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 5,
-    codigo: 'ESPI-FRSC-005',
+    codigo: 'VR002',
     nombre: 'Espinacas Frescas',
     descripcion: 'Espinacas orgánicas recién cosechadas, ricas en hierro y vitaminas. Perfectas para ensaladas y smoothies.',
     precio: 2500,
@@ -69,7 +69,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 6,
-    codigo: 'PIMI-TRIC-006',
+    codigo: 'VR003',
     nombre: 'Pimientos Tricolores',
     descripcion: 'Mix de pimientos rojos, amarillos y verdes. Frescos y crujientes, perfectos para ensaladas y guisos.',
     precio: 3500,
@@ -82,7 +82,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 7,
-    codigo: 'MIEL-ORG-007',
+    codigo: 'PO001',
     nombre: 'Miel Orgánica',
     descripcion: 'Miel pura de flores silvestres, sin procesar y 100% natural. Rica en antioxidantes y minerales.',
     precio: 4500,
@@ -95,7 +95,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 8,
-    codigo: 'QUIN-ORG-008',
+    codigo: 'PO002',
     nombre: 'Quinua Orgánica',
     descripcion: 'Quinua orgánica premium, rica en proteínas y aminoácidos esenciales. Perfecta para una dieta balanceada.',
     precio: 3200,
@@ -108,7 +108,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 9,
-    codigo: 'LECH-ENTE-009',
+    codigo: 'LO001',
     nombre: 'Leche Entera',
     descripcion: 'Leche entera fresca de vacas alimentadas con pasto. Rica en calcio y proteínas naturales.',
     precio: 1800,
@@ -121,7 +121,7 @@ export const productosIniciales: IProducto[] = [
   },
   {
     id: 10,
-    codigo: 'YOGU-NATU-010',
+    codigo: 'LO002',
     nombre: 'Yogurt Natural',
     descripcion: 'Yogurt natural sin azúcar añadida, rico en probióticos. Perfecto para el desayuno.',
     precio: 2200,

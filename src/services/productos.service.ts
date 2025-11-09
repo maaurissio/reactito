@@ -166,10 +166,29 @@ export function buscarProductos(termino: string): IProducto[] {
   );
 }
 
+// Función para generar código de producto según categoría
+function generarCodigoProducto(categoria: CategoriaProducto | string, datos: IDataProductos): string {
+  // Mapeo de categorías a prefijos
+  const prefijos: Record<string, string> = {
+    [CategoriaProducto.frutas]: 'FR',
+    [CategoriaProducto.verduras]: 'VR',
+    [CategoriaProducto.organicos]: 'PO',
+    [CategoriaProducto.lacteos]: 'LO',
+  };
+
+  const prefijo = prefijos[categoria] || 'PR';
+  
+  // Contar productos existentes de esta categoría para generar el número consecutivo
+  const productosCategoria = datos.productos.filter(p => p.categoria === categoria);
+  const numeroConsecutivo = productosCategoria.length + 1;
+  
+  return `${prefijo}${String(numeroConsecutivo).padStart(3, '0')}`;
+}
+
 export function agregarProducto(producto: Omit<IProducto, 'id' | 'codigo'>): IProducto {
   const datosActualizados = actualizarDatosProductos((datos) => {
     const nuevoId = datos.configuracion.proximoId;
-    const nuevoCodigo = `PR${String(nuevoId).padStart(4, '0')}`;
+    const nuevoCodigo = generarCodigoProducto(producto.categoria, datos);
     const nuevoProducto = normalizarProducto({
       ...producto,
       id: nuevoId,
@@ -219,4 +238,36 @@ export function eliminarProducto(id: number): boolean {
 
 export function resetearProductos(): void {
   localStorage.removeItem(CLAVE_DATOS_PRODUCTOS);
+}
+
+// Función para migrar códigos antiguos a los nuevos
+export function migrarCodigosProductos(): void {
+  const datos = obtenerDatosProductos();
+  
+  // Mapeo de categorías a prefijos
+  const prefijos: Record<string, string> = {
+    'Frutas Frescas': 'FR',
+    'Verduras Orgánicas': 'VR',
+    'Productos Orgánicos': 'PO',
+    'Productos Lácteos': 'LO',
+  };
+
+  // Contar productos por categoría para generar códigos consecutivos
+  const contadores: Record<string, number> = {
+    'Frutas Frescas': 1,
+    'Verduras Orgánicas': 1,
+    'Productos Orgánicos': 1,
+    'Productos Lácteos': 1,
+  };
+
+  // Actualizar cada producto
+  datos.productos.forEach((producto) => {
+    const prefijo = prefijos[producto.categoria] || 'PR';
+    const numero = contadores[producto.categoria] || 1;
+    producto.codigo = `${prefijo}${String(numero).padStart(3, '0')}`;
+    contadores[producto.categoria] = numero + 1;
+  });
+
+  // Guardar los datos actualizados
+  guardarDatosProductos(datos);
 }
