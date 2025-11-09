@@ -604,13 +604,6 @@ export const Perfil = () => {
                                 >
                                   <i className="fas fa-eye"></i>
                                 </button>
-                                <button 
-                                  onClick={() => verBoleta(pedido.id)}
-                                  className="btn btn-sm btn-outline-success"
-                                  title="Ver boleta"
-                                >
-                                  <i className="fas fa-receipt"></i>
-                                </button>
                               </td>
                             </tr>
                           ))}

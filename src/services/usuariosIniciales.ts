@@ -29,7 +29,7 @@ export const usuariosIniciales: IUsuario[] = [
     fechaRegistro: '2025-01-01',
     telefono: '945678912',
     direccion: 'mi casa',
-    avatar: 'img/pablo.jpg'
+    avatar: '/img/pablo.jpg'
   },
   {
     id: 3,
@@ -47,11 +47,11 @@ export const usuariosIniciales: IUsuario[] = [
   },
   {
     id: 4,
-    email: 'cliente@demo.com',
+    email: 'a@a.com',
     usuario: 'cliente',
-    password: 'cliente123',
-    nombre: 'Cliente',
-    apellido: 'Demo',
+    password: 'a123',
+    nombre: 'a',
+    apellido: 'b',
     rol: RolUsuario.cliente,
     isActivo: Estado.activo,
     estado: Estado.activo,

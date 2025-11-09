@@ -161,6 +161,12 @@ export function iniciarSesion(emailOUsuario: string, password: string): ISesionA
     return null;
   }
 
+  // Normalizar ruta del avatar (agregar / si no lo tiene)
+  let avatarNormalizado = usuario.avatar;
+  if (avatarNormalizado && !avatarNormalizado.startsWith('/') && !avatarNormalizado.startsWith('http')) {
+    avatarNormalizado = '/' + avatarNormalizado;
+  }
+
   const sesion: ISesionActiva = {
     id: usuario.id,
     usuario: usuario.usuario,
@@ -171,7 +177,7 @@ export function iniciarSesion(emailOUsuario: string, password: string): ISesionA
     fechaLogin: new Date().toISOString(),
     telefono: usuario.telefono,
     direccion: usuario.direccion,
-    avatar: usuario.avatar,
+    avatar: avatarNormalizado,
   };
 
   guardarSesionActiva(sesion);

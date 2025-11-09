@@ -1,333 +1,350 @@
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
-
 export const Blog = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('todas');
-
-  const categories = [
-    { id: 'todas', label: 'Todas', icon: 'fa-th' },
-    { id: 'frutas', label: 'Frutas', icon: 'fa-apple-alt' },
-    { id: 'verduras', label: 'Verduras', icon: 'fa-carrot' },
-    { id: 'organicos', label: 'Orgánicos', icon: 'fa-seedling' },
-    { id: 'lacteos', label: 'Lácteos', icon: 'fa-cheese' },
+  const categorias = [
+    {
+      id: 1,
+      titulo: 'Beneficios de las Manzanas',
+      descripcion: 'Las manzanas son ricas en fibra, vitamina C y antioxidantes. Ayudan a mejorar la digestión, fortalecer el sistema inmunológico y reducir el riesgo de enfermedades cardiovasculares.',
+      imagen: '/img/manzanas.webp',
+      enlace: 'https://www.who.int/es/news-room/fact-sheets/detail/healthy-diet',
+      colorAccent: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)'
+    },
+    {
+      id: 2,
+      titulo: 'Beneficios de las Verduras Orgánicas',
+      descripcion: 'Las verduras orgánicas están libres de pesticidas y químicos. Son ricas en fibra, vitaminas A, C y K, minerales esenciales que fortalecen tu sistema inmunológico y mejoran la salud digestiva.',
+      imagen: '/img/vegetales1.webp',
+      enlace: 'https://www.fao.org/nutrition/education/food-dietary-guidelines/background/es/',
+      colorAccent: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)'
+    },
+    {
+      id: 3,
+      titulo: 'Beneficios de los Productos Lácteos',
+      descripcion: 'Los lácteos naturales son una excelente fuente de calcio, proteínas y vitamina D. Contribuyen al fortalecimiento de huesos y dientes, y son fundamentales para el desarrollo muscular.',
+      imagen: '/img/yogurt.webp',
+      enlace: 'https://www.who.int/es/news-room/fact-sheets/detail/healthy-diet',
+      colorAccent: 'linear-gradient(135deg, #2ecc71 0%, #1e8449 100%)'
+    },
+    {
+      id: 4,
+      titulo: 'Beneficios de la Miel Orgánica',
+      descripcion: 'La miel pura es un endulzante natural con propiedades antibacterianas y antioxidantes. Aporta energía natural, ayuda a aliviar la tos y fortalece el sistema inmunológico de forma efectiva.',
+      imagen: '/img/miel1.webp',
+      enlace: 'https://www.who.int/es/news-room/fact-sheets/detail/healthy-diet',
+      colorAccent: 'linear-gradient(135deg, #52be80 0%, #27ae60 100%)'
+    },
+    {
+      id: 5,
+      titulo: 'Beneficios de Cereales y Granos',
+      descripcion: 'Los cereales integrales y granos como la quinoa son fundamentales para una dieta balanceada. Aportan carbohidratos complejos, fibra, proteínas vegetales y te mantienen energizado todo el día.',
+      imagen: '/img/quinoa.webp',
+      enlace: 'https://www.fao.org/nutrition/education/food-dietary-guidelines/background/es/',
+      colorAccent: 'linear-gradient(135deg, #58d68d 0%, #2ecc71 100%)'
+    },
+    {
+      id: 6,
+      titulo: 'Beneficios de Hortalizas Frescas',
+      descripcion: 'Las hortalizas frescas como espinacas, lechugas y pimientos son bajas en calorías y ricas en nutrientes. Perfectas para ensaladas, jugos verdes y platos saludables que cuidan tu bienestar.',
+      imagen: '/img/lechugas.webp',
+      enlace: 'https://www.who.int/es/news-room/fact-sheets/detail/healthy-diet',
+      colorAccent: 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)'
+    }
   ];
-
-  const articles = [
-    {
-      id: 'frutas-frescas',
-      category: 'frutas',
-      image: '/img/manzanas.webp',
-      date: '17 Sep 2025',
-      title: 'Beneficios de las Frutas Frescas',
-      excerpt: 'Descubre cómo las frutas de temporada aportan vitaminas y nutrientes esenciales para una vida más saludable.',
-      readTime: '5 min',
-      views: '1.2K'
-    },
-    {
-      id: 'verduras-organicas',
-      category: 'verduras',
-      image: '/img/vegetales1.webp',
-      date: '15 Sep 2025',
-      title: 'Verduras 100% Orgánicas',
-      excerpt: 'Cultivadas sin pesticidas ni químicos, nuestras verduras garantizan sabor auténtico y máximo valor nutricional.',
-      readTime: '4 min',
-      views: '987'
-    },
-    {
-      id: 'productos-organicos',
-      category: 'organicos',
-      image: '/img/miel1.webp',
-      date: '12 Sep 2025',
-      title: 'Productos Naturales y Orgánicos',
-      excerpt: 'Aceites, miel, granos y semillas elaborados con ingredientes naturales para un estilo de vida consciente.',
-      readTime: '6 min',
-      views: '1.5K'
-    },
-    {
-      id: 'productos-lacteos',
-      category: 'lacteos',
-      image: '/img/alimentos.webp',
-      date: '10 Sep 2025',
-      title: 'Lácteos Frescos de Granja',
-      excerpt: 'De granjas locales responsables, ricos en calcio y nutrientes esenciales para toda la familia.',
-      readTime: '4 min',
-      views: '823'
-    },
-  ];
-
-  const filteredArticles = selectedCategory === 'todas' 
-    ? articles 
-    : articles.filter(article => article.category === selectedCategory);
 
   return (
-    <main className="blog-page">
+    <main>
       {/* Hero Section */}
-      <section className="hero-section position-relative overflow-hidden py-5" style={{ 
-        backgroundImage: 'url(/img/lechugas.webp)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}>
-        <div className="container text-center">
-          <div className="row justify-content-center">
+      <section 
+        className="hero-section position-relative overflow-hidden" 
+        style={{
+          backgroundImage: 'url(/img/lechugas.webp)'
+        }}
+      >
+        <div className="container text-white">
+          <div className="row justify-content-center text-center py-5">
             <div className="col-lg-8">
-              <div className="mb-3">
-                <span className="badge rounded-pill px-3 py-2" style={{ 
-                  background: 'rgba(255, 255, 255, 0.2)', 
-                  color: 'white', 
-                  fontSize: '0.85rem', 
-                  fontWeight: '500',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <i className="fas fa-seedling me-2"></i>Vida Saludable
+              <div className="mb-4">
+                <span 
+                  className="badge px-4 py-2" 
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  <i className="fas fa-leaf me-2"></i>
+                  Conocimiento Saludable
                 </span>
               </div>
-              <h1 className="display-4 fw-bold mb-3 text-white" style={{ 
-                fontFamily: "'Playfair Display', serif", 
-                letterSpacing: '-0.02em' 
-              }}>
-                Blog
+              
+              <h1 
+                className="display-3 fw-bold mb-3 text-white" 
+                style={{ 
+                  fontFamily: "'Playfair Display', serif",
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+                }}
+              >
+                Blog de Nutrición
               </h1>
-              <p className="lead mb-0 text-white" style={{ 
-                fontSize: '1.1rem', 
-                lineHeight: '1.6',
-                opacity: '0.95'
-              }}>
-                Descubre los beneficios de una alimentación saludable y orgánica
+              
+              <p 
+                className="lead mb-0" 
+                style={{ 
+                  fontSize: '1.2rem',
+                  opacity: 0.95,
+                  maxWidth: '600px',
+                  margin: '0 auto'
+                }}
+              >
+                Descubre los beneficios de cada categoría de alimentos y cómo pueden mejorar tu salud
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Categories Filter */}
-      <section className="py-4" style={{ background: '#f8f9fa', borderBottom: '1px solid #e9ecef' }}>
+      {/* Categorías de Productos */}
+      <section className="py-5" style={{ background: '#f8f9fa' }}>
         <div className="container">
-          <div className="d-flex flex-wrap justify-content-center gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className="btn rounded-pill px-4 py-2"
-                style={{
-                  background: selectedCategory === cat.id ? 'var(--green-primary)' : 'white',
-                  color: selectedCategory === cat.id ? 'white' : '#495057',
-                  border: selectedCategory === cat.id ? 'none' : '1px solid #dee2e6',
-                  fontWeight: '500',
-                  fontSize: '0.9rem',
-                  transition: 'all 0.3s ease',
-                  boxShadow: selectedCategory === cat.id ? '0 4px 12px rgba(47, 158, 68, 0.3)' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedCategory !== cat.id) {
-                    e.currentTarget.style.borderColor = 'var(--green-primary)';
-                    e.currentTarget.style.color = 'var(--green-primary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedCategory !== cat.id) {
-                    e.currentTarget.style.borderColor = '#dee2e6';
-                    e.currentTarget.style.color = '#495057';
-                  }
-                }}
-              >
-                <i className={`fas ${cat.icon} me-2`}></i>
-                {cat.label}
-              </button>
+          <div className="text-center mb-5">
+            <h2 
+              className="fw-bold mb-3" 
+              style={{ 
+                fontFamily: "'Playfair Display', serif",
+                color: '#2f9e44',
+                fontSize: '2.5rem'
+              }}
+            >
+              Nuestros Productos
+            </h2>
+            <p className="text-muted" style={{ fontSize: '1.1rem', maxWidth: '700px', margin: '0 auto' }}>
+              Explora las diferentes categorías de productos orgánicos y naturales que ofrecemos
+            </p>
+          </div>
+
+          <div className="row g-4">
+            {categorias.map((categoria) => (
+              <div key={categoria.id} className="col-lg-4 col-md-6">
+                <div 
+                  className="card border-0 shadow-sm overflow-hidden d-flex flex-column"
+                  style={{
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    height: '100%'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-8px)';
+                    e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                  }}
+                >
+                  {/* Imagen */}
+                  <div 
+                    className="position-relative overflow-hidden" 
+                    style={{ height: '220px' }}
+                  >
+                    <img 
+                      src={categoria.imagen} 
+                      alt={categoria.titulo}
+                      className="w-100 h-100"
+                      style={{ 
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    />
+                    
+                    {/* Badge de categoría */}
+                    <div 
+                      className="position-absolute top-0 start-0 m-3"
+                    >
+                      <span 
+                        className="badge px-3 py-2"
+                        style={{
+                          background: categoria.colorAccent,
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                        }}
+                      >
+                        <i className="fas fa-check-circle me-2"></i>
+                        Orgánico
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Contenido */}
+                  <div className="card-body p-4 d-flex flex-column">
+                    <h3 
+                      className="fw-bold mb-3" 
+                      style={{ 
+                        fontFamily: "'Playfair Display', serif",
+                        color: '#2f9e44',
+                        fontSize: '1.5rem'
+                      }}
+                    >
+                      {categoria.titulo}
+                    </h3>
+                    
+                    <p 
+                      className="text-muted mb-4 flex-grow-1" 
+                      style={{ 
+                        fontSize: '0.95rem',
+                        lineHeight: '1.7'
+                      }}
+                    >
+                      {categoria.descripcion}
+                    </p>
+
+                    {/* Botón con link */}
+                    <a
+                      href={categoria.enlace}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn w-100 mt-auto"
+                      style={{
+                        background: categoria.colorAccent,
+                        color: 'white',
+                        fontWeight: '600',
+                        padding: '0.75rem',
+                        border: 'none',
+                        borderRadius: '8px',
+                        transition: 'all 0.3s ease',
+                        textDecoration: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                        e.currentTarget.style.boxShadow = '0 8px 16px rgba(46, 204, 113, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <i className="fas fa-book-open me-2"></i>
+                      Leer Más Sobre Beneficios
+                    </a>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Blog Grid */}
-      <section className="py-5" style={{ background: '#f8f9fa' }}>
+      {/* Sección de Compromiso */}
+      <section className="py-5 bg-white">
         <div className="container">
-          <div className="row g-4">
-            {filteredArticles.map((article) => (
-              <div key={article.id} className="col-lg-6">
-                <article className="card h-100 border-0 shadow-sm" style={{ 
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease'
+          <div className="row align-items-center">
+            <div className="col-lg-6 mb-4 mb-lg-0">
+              <img 
+                src="/img/regando.webp" 
+                alt="Cultivo orgánico"
+                className="img-fluid rounded shadow"
+                style={{ maxHeight: '400px', width: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div className="col-lg-6 ps-lg-5">
+              <h2 
+                className="fw-bold mb-4" 
+                style={{ 
+                  fontFamily: "'Playfair Display', serif",
+                  color: '#2f9e44',
+                  fontSize: '2.2rem'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                }}>
-                  {/* Image */}
-                  <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
-                    <img 
-                      src={article.image} 
-                      className="w-100 h-100" 
-                      alt={article.title} 
-                      style={{ objectFit: 'cover' }}
-                      loading="lazy"
-                    />
-                    <div className="position-absolute top-0 start-0 w-100 h-100" style={{
-                      background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 100%)'
-                    }}></div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="card-body p-4">
-                    {/* Meta info */}
-                    <div className="d-flex align-items-center justify-content-between mb-3">
-                      <small className="text-muted" style={{ fontSize: '0.85rem' }}>
-                        <i className="fas fa-calendar-alt me-1"></i>
-                        {article.date}
-                      </small>
-                      <div className="d-flex align-items-center gap-3">
-                        <small className="text-muted" style={{ fontSize: '0.85rem' }}>
-                          <i className="fas fa-clock me-1"></i>
-                          {article.readTime}
-                        </small>
-                        <small className="text-muted" style={{ fontSize: '0.85rem' }}>
-                          <i className="fas fa-eye me-1"></i>
-                          {article.views}
-                        </small>
-                      </div>
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="mb-3" style={{ 
-                      fontFamily: "'Playfair Display', serif", 
-                      fontSize: '1.5rem', 
-                      fontWeight: '700', 
-                      color: '#1d1d1f',
-                      lineHeight: '1.3'
-                    }}>
-                      {article.title}
-                    </h3>
-
-                    {/* Excerpt */}
-                    <p className="mb-4" style={{ 
-                      color: '#6e6e73', 
-                      lineHeight: '1.6', 
-                      fontSize: '0.95rem' 
-                    }}>
-                      {article.excerpt}
-                    </p>
-
-                    {/* Action */}
-                    <Link 
-                      to="/catalogo" 
-                      className="btn btn-success rounded-pill px-4 py-2"
-                      style={{ 
-                        fontWeight: '500',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateX(5px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateX(0)';
+              >
+                Nuestro Compromiso con la Salud
+              </h2>
+              <p className="text-muted mb-4" style={{ fontSize: '1.05rem', lineHeight: '1.8' }}>
+                En <strong>Huerto Hogar</strong> nos comprometemos a traerte productos frescos, orgánicos y de la más alta calidad. 
+                Trabajamos directamente con productores locales que comparten nuestra visión de una agricultura sostenible y respetuosa con el medio ambiente.
+              </p>
+              <div className="row g-3">
+                <div className="col-sm-6">
+                  <div className="d-flex align-items-start">
+                    <div 
+                      className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        background: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)',
+                        flexShrink: 0
                       }}
                     >
-                      Ver Productos
-                      <i className="fas fa-arrow-right ms-2"></i>
-                    </Link>
-                  </div>
-                </article>
-              </div>
-            ))}
-          </div>
-
-          {/* Newsletter CTA */}
-          <div className="row mt-5">
-            <div className="col-12">
-              <div className="card border-0 shadow-sm" style={{ 
-                borderRadius: '20px',
-                background: 'linear-gradient(135deg, #2f9e44 0%, #51cf66 100%)',
-                overflow: 'hidden'
-              }}>
-                <div className="card-body text-center py-5 px-4">
-                  <div className="mb-3">
-                    <i className="fas fa-envelope-open-text" style={{ 
-                      fontSize: '3rem', 
-                      color: 'white', 
-                      opacity: '0.9' 
-                    }}></i>
-                  </div>
-                  <h3 className="mb-3 text-white" style={{ 
-                    fontFamily: "'Playfair Display', serif", 
-                    fontSize: '2rem', 
-                    fontWeight: '700'
-                  }}>
-                    Suscríbete a Nuestro Newsletter
-                  </h3>
-                  <p className="mb-4 text-white" style={{ 
-                    fontSize: '1.05rem', 
-                    maxWidth: '600px', 
-                    margin: '0 auto 2rem',
-                    opacity: '0.95'
-                  }}>
-                    Recibe las últimas novedades, recetas saludables y ofertas exclusivas directamente en tu correo.
-                  </p>
-                  <div className="row justify-content-center">
-                    <div className="col-lg-6">
-                      <div className="input-group input-group-lg">
-                        <input 
-                          type="email" 
-                          className="form-control" 
-                          placeholder="Tu correo electrónico"
-                          style={{ 
-                            borderRadius: '50px 0 0 50px',
-                            border: 'none',
-                            padding: '12px 24px'
-                          }}
-                        />
-                        <button 
-                          className="btn btn-dark px-4"
-                          style={{ 
-                            borderRadius: '0 50px 50px 0',
-                            fontWeight: '600',
-                            background: '#1d1d1f',
-                            border: 'none'
-                          }}
-                        >
-                          Suscribirme
-                        </button>
-                      </div>
+                      <i className="fas fa-leaf text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-1">100% Orgánico</h5>
+                      <p className="text-muted small mb-0">Sin pesticidas ni químicos</p>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="row mt-4">
-            <div className="col-12">
-              <div className="text-center py-4">
-                <p className="text-muted mb-3" style={{ fontSize: '1rem' }}>
-                  ¿Listo para una alimentación más saludable?
-                </p>
-                <Link 
-                  to="/catalogo" 
-                  className="btn btn-success btn-lg rounded-pill px-5 py-3"
-                  style={{ 
-                    fontWeight: '600', 
-                    fontSize: '1.05rem',
-                    boxShadow: '0 6px 20px rgba(47, 158, 68, 0.3)',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-3px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(47, 158, 68, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(47, 158, 68, 0.3)';
-                  }}
-                >
-                  <i className="fas fa-shopping-basket me-2"></i>
-                  Ver Catálogo Completo
-                </Link>
+                <div className="col-sm-6">
+                  <div className="d-flex align-items-start">
+                    <div 
+                      className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        background: 'linear-gradient(135deg, #52be80 0%, #27ae60 100%)',
+                        flexShrink: 0
+                      }}
+                    >
+                      <i className="fas fa-heart text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-1">Frescos</h5>
+                      <p className="text-muted small mb-0">Directamente del campo</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-sm-6">
+                  <div className="d-flex align-items-start">
+                    <div 
+                      className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        background: 'linear-gradient(135deg, #58d68d 0%, #2ecc71 100%)',
+                        flexShrink: 0
+                      }}
+                    >
+                      <i className="fas fa-seedling text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-1">Sostenible</h5>
+                      <p className="text-muted small mb-0">Agricultura responsable</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-sm-6">
+                  <div className="d-flex align-items-start">
+                    <div 
+                      className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        background: 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)',
+                        flexShrink: 0
+                      }}
+                    >
+                      <i className="fas fa-truck text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-1">Entrega Rápida</h5>
+                      <p className="text-muted small mb-0">A todo Chile</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
