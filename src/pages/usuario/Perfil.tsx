@@ -57,6 +57,40 @@ export const Perfil = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    
+    // Validación especial para teléfono chileno
+    if (name === 'telefono') {
+      // Remover todo excepto números
+      const numeros = value.replace(/\D/g, '');
+      
+      // Si empieza con 56, lo removemos (asumimos que siempre es +56)
+      const numerosSin56 = numeros.startsWith('56') ? numeros.substring(2) : numeros;
+      
+      // Limitar a 9 dígitos
+      const numerosLimitados = numerosSin56.substring(0, 9);
+      
+      // Formatear el número
+      let numeroFormateado = '';
+      if (numerosLimitados.length > 0) {
+        numeroFormateado = '+56';
+        if (numerosLimitados.length > 0) {
+          numeroFormateado += ' ' + numerosLimitados.substring(0, 1);
+        }
+        if (numerosLimitados.length > 1) {
+          numeroFormateado += ' ' + numerosLimitados.substring(1, 5);
+        }
+        if (numerosLimitados.length > 5) {
+          numeroFormateado += ' ' + numerosLimitados.substring(5, 9);
+        }
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: numeroFormateado
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -442,7 +476,12 @@ export const Perfil = () => {
                           onChange={handleInputChange}
                           disabled={!editMode}
                           placeholder="+56 9 1234 5678"
+                          maxLength={17}
                         />
+                        <small className="text-muted">
+                          <i className="fas fa-info-circle me-1"></i>
+                          Formato chileno: +56 9 XXXX XXXX (máximo 9 dígitos)
+                        </small>
                       </div>
                       <div className="col-md-6">
                         <label className="form-label">

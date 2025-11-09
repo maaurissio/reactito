@@ -8,6 +8,7 @@ export const DetalleProducto = () => {
   const navigate = useNavigate();
   const productos = useProductsStore((state) => state.productos);
   const agregarItem = useCartStore((state) => state.agregarItem);
+  const itemsCarrito = useCartStore((state) => state.items);
   const user = useAuthStore((state) => state.user);
   
   const [cantidad, setCantidad] = useState(1);
@@ -15,6 +16,8 @@ export const DetalleProducto = () => {
   const [comentario, setComentario] = useState('');
   const [resenas, setResenas] = useState<IResena[]>([]);
   const [showToast, setShowToast] = useState(false);
+  const [showResenaToast, setShowResenaToast] = useState(false);
+  const [showStockError, setShowStockError] = useState(false);
   const [hoverStar, setHoverStar] = useState(0);
 
   const producto: IProducto | undefined = useMemo(() => {
@@ -52,9 +55,15 @@ export const DetalleProducto = () => {
 
   const handleAgregarCarrito = () => {
     if (!producto) return;
-    agregarItem(producto, cantidad);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+    const agregado = agregarItem(producto, cantidad);
+    if (agregado) {
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } else {
+      // Mostrar error de stock
+      setShowStockError(true);
+      setTimeout(() => setShowStockError(false), 4000);
+    }
   };
 
   const handleSubmitResena = (e: React.FormEvent) => {
@@ -85,7 +94,41 @@ export const DetalleProducto = () => {
     
     setComentario('');
     setCalificacion(5);
-    alert('¡Gracias por tu reseña!');
+    setShowResenaToast(true);
+    setTimeout(() => setShowResenaToast(false), 4000);
+  };
+
+  const getAvatarColor = (nombre: string) => {
+    const inicial = nombre.charAt(0).toUpperCase();
+    const colores: { [key: string]: string } = {
+      'A': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'B': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'C': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'D': 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'E': 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      'F': 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+      'G': 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      'H': 'linear-gradient(135deg, #ff9a56 0%, #ff6a00 100%)',
+      'I': 'linear-gradient(135deg, #f2709c 0%, #ff835b 100%)',
+      'J': 'linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)',
+      'K': 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+      'L': 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+      'M': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'N': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'O': 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'P': 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      'Q': 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+      'R': 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      'S': 'linear-gradient(135deg, #ff9a56 0%, #ff6a00 100%)',
+      'T': 'linear-gradient(135deg, #f2709c 0%, #ff835b 100%)',
+      'U': 'linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)',
+      'V': 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+      'W': 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+      'X': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'Y': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'Z': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    };
+    return colores[inicial] || 'linear-gradient(135deg, #2E8B57 0%, #228B22 100%)';
   };
 
   const promedioCalificacion = useMemo(() => {
@@ -522,10 +565,11 @@ export const DetalleProducto = () => {
                               style={{ 
                                 width: '50px', 
                                 height: '50px',
-                                background: 'linear-gradient(135deg, #2E8B57 0%, #228B22 100%)',
+                                background: getAvatarColor(resena.usuarioNombre),
                                 color: '#fff',
                                 fontWeight: '700',
-                                fontSize: '1.2rem'
+                                fontSize: '1.2rem',
+                                boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
                               }}
                             >
                               <span>{resena.usuarioNombre.charAt(0).toUpperCase()}</span>
@@ -599,6 +643,134 @@ export const DetalleProducto = () => {
                   className="btn-close btn-sm" 
                   onClick={() => setShowToast(false)}
                   style={{ opacity: 0.6 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification para Reseñas */}
+      {showResenaToast && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            minWidth: '350px',
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+        >
+          <div 
+            className="card" 
+            style={{
+              background: 'linear-gradient(135deg, rgba(46, 139, 87, 0.95) 0%, rgba(34, 139, 34, 0.95) 100%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              border: 'none',
+              boxShadow: '0 12px 40px rgba(46, 139, 87, 0.4)',
+              overflow: 'hidden'
+            }}
+          >
+            <div className="card-body p-4">
+              <div className="d-flex align-items-start">
+                <div className="me-3">
+                  <div 
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    <i className="fas fa-check-circle" style={{ fontSize: '2rem', color: '#fff' }}></i>
+                  </div>
+                </div>
+                <div className="flex-grow-1">
+                  <h5 className="mb-2" style={{ fontWeight: '700', color: '#fff', fontSize: '1.1rem' }}>
+                    ¡Gracias por tu reseña!
+                  </h5>
+                  <p className="mb-0" style={{ fontSize: '0.95rem', color: 'rgba(255, 255, 255, 0.9)', lineHeight: '1.5' }}>
+                    Tu opinión ayuda a otros clientes a tomar mejores decisiones de compra.
+                  </p>
+                  <div className="mt-3">
+                    <div className="d-flex align-items-center gap-2">
+                      <div className="text-warning">
+                        {[...Array(calificacion)].map((_, i) => (
+                          <i key={i} className="fas fa-star" style={{ fontSize: '0.9rem' }}></i>
+                        ))}
+                      </div>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem' }}>
+                        {calificacion} estrella{calificacion !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white btn-sm" 
+                  onClick={() => setShowResenaToast(false)}
+                  style={{ opacity: 0.8 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast de Error de Stock */}
+      {showStockError && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            minWidth: '350px',
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+        >
+          <div 
+            className="card" 
+            style={{
+              background: 'linear-gradient(135deg, rgba(220, 53, 69, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              border: 'none',
+              boxShadow: '0 12px 40px rgba(220, 53, 69, 0.4)',
+              overflow: 'hidden'
+            }}
+          >
+            <div className="card-body p-4">
+              <div className="d-flex align-items-start">
+                <div className="me-3">
+                  <div 
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', color: '#fff' }}></i>
+                  </div>
+                </div>
+                <div className="flex-grow-1">
+                  <h5 className="mb-2" style={{ fontWeight: '700', color: '#fff', fontSize: '1.1rem' }}>
+                    Stock insuficiente
+                  </h5>
+                  <p className="mb-0" style={{ fontSize: '0.95rem', color: 'rgba(255, 255, 255, 0.9)', lineHeight: '1.5' }}>
+                    No hay suficiente stock disponible. Solo quedan <strong>{producto?.stock || 0}</strong> unidades{itemsCarrito.find(item => item.producto.id === producto?.id) && ` (ya tienes ${itemsCarrito.find(item => item.producto.id === producto?.id)?.cantidad} en el carrito)`}.
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white btn-sm" 
+                  onClick={() => setShowStockError(false)}
+                  style={{ opacity: 0.8 }}
                 />
               </div>
             </div>

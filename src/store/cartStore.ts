@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { IProducto, IItemCarrito, ICarrito } from '../types';
 
 interface CartState extends ICarrito {
-  agregarItem: (producto: IProducto, cantidad?: number) => void;
+  agregarItem: (producto: IProducto, cantidad?: number) => boolean;
   eliminarItem: (productoId: number) => void;
   actualizarCantidad: (productoId: number, cantidad: number) => void;
   limpiarCarrito: () => void;
@@ -21,9 +21,19 @@ export const useCartStore = create<CartState>()(
       total: 0,
       cantidadItems: 0,
 
-      agregarItem: (producto: IProducto, cantidad = 1) => {
+      agregarItem: (producto: IProducto, cantidad = 1): boolean => {
         const { items } = get();
         const itemExistente = items.find((item) => item.producto.id === producto.id);
+
+        // Validar stock disponible
+        const cantidadEnCarrito = itemExistente ? itemExistente.cantidad : 0;
+        const cantidadTotal = cantidadEnCarrito + cantidad;
+
+        if (cantidadTotal > producto.stock) {
+          // No se puede agregar más de lo disponible en stock
+          console.warn(`No hay suficiente stock. Disponible: ${producto.stock}, en carrito: ${cantidadEnCarrito}`);
+          return false;
+        }
 
         if (itemExistente) {
           // Actualizar cantidad si ya existe
@@ -51,6 +61,7 @@ export const useCartStore = create<CartState>()(
           set({ items: [...items, nuevoItem] });
         }
         get().calcularTotal();
+        return true;
       },
 
       eliminarItem: (productoId: number) => {
