@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId } from '../../services/usuarios.service';
+import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId, eliminarCuentaConConfirmacion } from '../../services/usuarios.service';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { obtenerPedidosUsuario, type IPedido } from '../../services/pedidos.service';
 
@@ -29,6 +29,11 @@ export const Perfil = () => {
   const [showPedidoModal, setShowPedidoModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteData, setDeleteData] = useState({
+    password: '',
+    confirmText: '',
+  });
 
   useEffect(() => {
     if (user) {
@@ -278,6 +283,39 @@ export const Perfil = () => {
       setMessage({ type: 'success', text: 'Foto de perfil eliminada' });
       setShowAvatarModal(false);
       checkAuth();
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    }
+  };
+
+  const handleDeleteAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!user) return;
+
+    // Validar que escribió "Confirmo"
+    if (deleteData.confirmText !== 'Confirmo') {
+      setMessage({ type: 'error', text: 'Debes escribir "Confirmo" para eliminar tu cuenta' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      return;
+    }
+
+    // Validar que la contraseña no esté vacía
+    if (!deleteData.password) {
+      setMessage({ type: 'error', text: 'Debes ingresar tu contraseña' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      return;
+    }
+
+    // Intentar eliminar la cuenta
+    const exito = eliminarCuentaConConfirmacion(user.id, deleteData.password);
+
+    if (exito) {
+      setMessage({ type: 'success', text: 'Tu cuenta ha sido eliminada exitosamente' });
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } else {
+      setMessage({ type: 'error', text: 'Contraseña incorrecta. No se pudo eliminar la cuenta' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     }
   };
@@ -692,9 +730,27 @@ export const Perfil = () => {
                   </div>
                 ) : (
                   <div className="card-body">
-                    <div className="alert alert-info mb-0">
+                    <div className="alert alert-info mb-3">
                       <i className="fas fa-info-circle me-2"></i>
                       Haz clic en "Cambiar Contraseña" para actualizar tu contraseña de acceso.
+                    </div>
+
+                    {/* Zona de peligro - Eliminar cuenta */}
+                    <div className="border border-danger rounded p-3 mt-4">
+                      <h6 className="text-danger mb-3">
+                        <i className="fas fa-exclamation-triangle me-2"></i>
+                        Zona de Peligro
+                      </h6>
+                      <p className="text-muted small mb-3">
+                        Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate de esto.
+                      </p>
+                      <button 
+                        className="btn btn-danger"
+                        onClick={() => setShowDeleteModal(true)}
+                      >
+                        <i className="fas fa-trash-alt me-2"></i>
+                        Eliminar mi cuenta
+                      </button>
                     </div>
                   </div>
                 )}
@@ -946,6 +1002,104 @@ export const Perfil = () => {
                     Guardar Foto
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Eliminar Cuenta */}
+      {showDeleteModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title text-white">
+                  <i className="fas fa-exclamation-triangle me-2"></i>
+                  Eliminar Cuenta
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteData({ password: '', confirmText: '' });
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-danger" role="alert">
+                  <h6 className="alert-heading">
+                    <i className="fas fa-exclamation-circle me-2"></i>
+                    ¡Advertencia! Esta acción es irreversible
+                  </h6>
+                  <hr />
+                  <p className="mb-0">
+                    Al eliminar tu cuenta:
+                  </p>
+                  <ul className="mt-2 mb-0">
+                    <li>Perderás acceso a todos tus datos</li>
+                    <li>Se eliminarán tus pedidos históricos</li>
+                    <li>No podrás recuperar tu información</li>
+                  </ul>
+                </div>
+
+                <form onSubmit={handleDeleteAccount}>
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">
+                      <i className="fas fa-lock me-2 text-danger"></i>
+                      Ingresa tu contraseña *
+                    </label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={deleteData.password}
+                      onChange={(e) => setDeleteData({ ...deleteData, password: e.target.value })}
+                      placeholder="Tu contraseña actual"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">
+                      <i className="fas fa-keyboard me-2 text-danger"></i>
+                      Escribe "Confirmo" para continuar *
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={deleteData.confirmText}
+                      onChange={(e) => setDeleteData({ ...deleteData, confirmText: e.target.value })}
+                      placeholder="Confirmo"
+                      required
+                    />
+                    <small className="text-muted">
+                      Debes escribir exactamente: <strong>Confirmo</strong>
+                    </small>
+                  </div>
+
+                  <div className="d-grid gap-2">
+                    <button 
+                      type="submit" 
+                      className="btn btn-danger"
+                      disabled={deleteData.confirmText !== 'Confirmo' || !deleteData.password}
+                    >
+                      <i className="fas fa-trash-alt me-2"></i>
+                      Sí, eliminar mi cuenta permanentemente
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        setShowDeleteModal(false);
+                        setDeleteData({ password: '', confirmText: '' });
+                      }}
+                    >
+                      <i className="fas fa-times me-2"></i>
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>

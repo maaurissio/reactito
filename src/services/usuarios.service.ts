@@ -236,6 +236,25 @@ export function cambiarPassword(userId: number, passwordActual: string, password
   return true;
 }
 
+export function eliminarCuentaConConfirmacion(userId: number, password: string): boolean {
+  const usuario = obtenerUsuarioPorId(userId);
+  
+  // Verificar que el usuario existe y la contraseña es correcta
+  if (!usuario || usuario.password !== password) {
+    return false;
+  }
+
+  // Eliminar el usuario
+  const eliminado = eliminarUsuario(userId);
+  
+  // Si se eliminó correctamente, cerrar la sesión
+  if (eliminado) {
+    cerrarSesion();
+  }
+  
+  return eliminado;
+}
+
 // ============================================
 // RECUPERACIÓN DE CONTRASEÑA
 // ============================================
