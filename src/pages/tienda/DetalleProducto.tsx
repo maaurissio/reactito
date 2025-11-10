@@ -309,7 +309,7 @@ export const DetalleProducto = () => {
                 </div>
                 <div className="d-flex justify-content-between align-items-center">
                   <span style={{ fontWeight: '600', color: '#1d1d1f' }}>Código:</span>
-                  <span style={{ color: '#6e6e73' }}>PR{String(producto?.id || 0).padStart(3, '0')}</span>
+                  <span style={{ color: '#6e6e73' }}>{producto.codigo}</span>
                 </div>
               </div>
 
