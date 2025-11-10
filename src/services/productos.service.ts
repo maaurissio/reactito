@@ -168,13 +168,26 @@ export function buscarProductos(termino: string): IProducto[] {
 
 // Función para generar código de producto según categoría
 function generarCodigoProducto(categoria: CategoriaProducto | string, datos: IDataProductos): string {
-  // Mapeo de categorías a prefijos
-  const prefijos: Record<string, string> = {
+  // Intentar cargar categorías personalizadas
+  let prefijos: Record<string, string> = {
     [CategoriaProducto.frutas]: 'FR',
     [CategoriaProducto.verduras]: 'VR',
     [CategoriaProducto.organicos]: 'PO',
     [CategoriaProducto.lacteos]: 'LO',
   };
+
+  // Agregar prefijos de categorías personalizadas
+  try {
+    const categoriasCustom = localStorage.getItem('categorias_productos_custom');
+    if (categoriasCustom) {
+      const categorias = JSON.parse(categoriasCustom);
+      categorias.forEach((cat: any) => {
+        prefijos[cat.value] = cat.codigo;
+      });
+    }
+  } catch (error) {
+    console.error('Error al cargar categorías personalizadas:', error);
+  }
 
   const prefijo = prefijos[categoria] || 'PR';
   

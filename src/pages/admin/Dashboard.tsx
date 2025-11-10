@@ -8,6 +8,7 @@ import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../serv
 import { agregarProducto } from '../../services/productos.service';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { SelectModerno } from '../../components/ui';
 import type { IProducto, IUsuario } from '../../types';
 import { Estado, RolUsuario } from '../../types/models';
 
@@ -93,6 +94,19 @@ export const Dashboard = () => {
   });
   const [imagenPreview, setImagenPreview] = useState('');
 
+  // Estados para categorías personalizadas
+  const [categorias, setCategorias] = useState<Array<{value: string, label: string, codigo: string}>>([
+    { value: 'Frutas Frescas', label: 'Frutas Frescas', codigo: 'FR' },
+    { value: 'Verduras Orgánicas', label: 'Verduras Orgánicas', codigo: 'VR' },
+    { value: 'Productos Orgánicos', label: 'Productos Orgánicos', codigo: 'PO' },
+    { value: 'Productos Lácteos', label: 'Productos Lácteos', codigo: 'LO' },
+  ]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState({
+    nombre: '',
+    codigo: ''
+  });
+
   // Estadísticas dinámicas
   const totalProductos = productos.length;
   const totalUsuarios = usuarios.length;
@@ -119,7 +133,32 @@ export const Dashboard = () => {
     setCostoEnvioBase(config.costoEnvioBase);
     setEnvioGratisDesde(config.envioGratisDesde);
     setEnvioGratisHabilitado(config.envioGratisHabilitado);
+
+    // Cargar categorías personalizadas desde localStorage
+    const categoriasGuardadas = localStorage.getItem('categorias_productos_custom');
+    if (categoriasGuardadas) {
+      try {
+        const categoriasParseadas = JSON.parse(categoriasGuardadas);
+        setCategorias(categoriasParseadas);
+      } catch (error) {
+        console.error('Error al cargar categorías:', error);
+      }
+    }
   }, [cargarProductos]);
+
+  // Bloquear scroll del body cuando se abren modales
+  useEffect(() => {
+    if (showAddModal || showEditModal || showCategoryModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showAddModal, showEditModal, showCategoryModal]);
 
   // Redirigir si no es admin
   if (!isAdmin) {
@@ -472,6 +511,73 @@ export const Dashboard = () => {
   const handleImagenChange = (url: string) => {
     setFormAdd({ ...formAdd, imagen: url });
     setImagenPreview(url);
+  };
+
+  // Funciones para manejar categorías personalizadas
+  const agregarCategoria = () => {
+    // Validaciones
+    if (!nuevaCategoria.nombre.trim()) {
+      mostrarToast('El nombre de la categoría es obligatorio', 'error');
+      return;
+    }
+
+    if (!nuevaCategoria.codigo.trim()) {
+      mostrarToast('El código de la categoría es obligatorio', 'error');
+      return;
+    }
+
+    // Validar que el código tenga 2-3 caracteres
+    if (nuevaCategoria.codigo.length < 2 || nuevaCategoria.codigo.length > 3) {
+      mostrarToast('El código debe tener 2 o 3 caracteres', 'error');
+      return;
+    }
+
+    // Validar que no exista una categoría con el mismo nombre o código
+    const existeNombre = categorias.some(cat => cat.value.toLowerCase() === nuevaCategoria.nombre.trim().toLowerCase());
+    const existeCodigo = categorias.some(cat => cat.codigo.toUpperCase() === nuevaCategoria.codigo.trim().toUpperCase());
+
+    if (existeNombre) {
+      mostrarToast('Ya existe una categoría con ese nombre', 'error');
+      return;
+    }
+
+    if (existeCodigo) {
+      mostrarToast('Ya existe una categoría con ese código', 'error');
+      return;
+    }
+
+    // Crear nueva categoría
+    const nuevaCat = {
+      value: nuevaCategoria.nombre.trim(),
+      label: nuevaCategoria.nombre.trim(),
+      codigo: nuevaCategoria.codigo.trim().toUpperCase()
+    };
+
+    const categoriasActualizadas = [...categorias, nuevaCat];
+    setCategorias(categoriasActualizadas);
+
+    // Guardar en localStorage
+    localStorage.setItem('categorias_productos_custom', JSON.stringify(categoriasActualizadas));
+
+    // Limpiar formulario y cerrar modal
+    setNuevaCategoria({ nombre: '', codigo: '' });
+    setShowCategoryModal(false);
+    mostrarToast('Categoría agregada exitosamente', 'success');
+  };
+
+  const eliminarCategoria = (categoriaValue: string) => {
+    // No permitir eliminar si hay productos con esa categoría
+    const productosConCategoria = productos.filter(p => p.categoria === categoriaValue);
+    
+    if (productosConCategoria.length > 0) {
+      mostrarToast(`No puedes eliminar esta categoría porque hay ${productosConCategoria.length} producto(s) asignado(s)`, 'error');
+      return;
+    }
+
+    const categoriasActualizadas = categorias.filter(cat => cat.value !== categoriaValue);
+    setCategorias(categoriasActualizadas);
+    localStorage.setItem('categorias_productos_custom', JSON.stringify(categoriasActualizadas));
+    mostrarToast('Categoría eliminada', 'success');
   };
 
   const handleArchivoImagen = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1260,21 +1366,32 @@ export const Dashboard = () => {
       {showAddModal && (
         <div 
           className="modal fade show" 
-          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', overflow: 'auto' }}
           onClick={() => setShowAddModal(false)}
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="fas fa-plus-circle text-success me-2"></i>
                   Agregar Nuevo Producto
                 </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowAddModal(false)}
-                ></button>
+                <div className="d-flex gap-2 align-items-center">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-success"
+                    onClick={() => setShowCategoryModal(true)}
+                    title="Gestionar categorías"
+                  >
+                    <i className="fas fa-tags me-1"></i>
+                    Gestionar Categorías
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    onClick={() => setShowAddModal(false)}
+                  ></button>
+                </div>
               </div>
               <div className="modal-body">
                 <div className="row g-3">
@@ -1315,17 +1432,17 @@ export const Dashboard = () => {
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Categoría *</label>
-                    <select 
-                      className="form-select" 
+                    <SelectModerno
+                      label=""
                       value={formAdd.categoria}
-                      onChange={(e) => setFormAdd({...formAdd, categoria: e.target.value})}
-                    >
-                      <option value="">Seleccionar categoría</option>
-                      <option value="Frutas Frescas">Frutas Frescas</option>
-                      <option value="Verduras Orgánicas">Verduras Orgánicas</option>
-                      <option value="Productos Orgánicos">Productos Orgánicos</option>
-                      <option value="Productos Lácteos">Productos Lácteos</option>
-                    </select>
+                      onChange={(value) => setFormAdd({...formAdd, categoria: value})}
+                      options={categorias.map(cat => ({
+                        value: cat.value,
+                        label: cat.label
+                      }))}
+                      placeholder="Seleccionar categoría"
+                      icon="fas fa-tags"
+                    />
                   </div>
                   <div className="col-12">
                     <label className="form-label">Descripción *</label>
@@ -1452,10 +1569,10 @@ export const Dashboard = () => {
       {showEditModal && productoSeleccionado && (
         <div 
           className="modal fade show" 
-          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', overflow: 'auto' }}
           onClick={() => setShowEditModal(false)}
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -1500,18 +1617,18 @@ export const Dashboard = () => {
                     />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label">Categoría *</label>
-                    <select 
-                      className="form-select" 
+                    <SelectModerno
+                      label="Categoría"
                       value={formEdit.categoria}
-                      onChange={(e) => setFormEdit({...formEdit, categoria: e.target.value})}
-                    >
-                      <option value="">Seleccionar categoría</option>
-                      <option value="Frutas Frescas">Frutas Frescas</option>
-                      <option value="Verduras Orgánicas">Verduras Orgánicas</option>
-                      <option value="Productos Orgánicos">Productos Orgánicos</option>
-                      <option value="Productos Lácteos">Productos Lácteos</option>
-                    </select>
+                      onChange={(value) => setFormEdit({...formEdit, categoria: value})}
+                      options={categorias.map(cat => ({
+                        value: cat.value,
+                        label: cat.label
+                      }))}
+                      placeholder="Seleccionar categoría"
+                      icon="fas fa-tags"
+                      required
+                    />
                   </div>
                   <div className="col-12">
                     <label className="form-label">Descripción *</label>
@@ -2162,6 +2279,123 @@ export const Dashboard = () => {
         </div>
       )}
 
+      {/* Modal de Agregar Categoría */}
+      {showCategoryModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', overflow: 'auto' }}>
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title text-white">
+                  <i className="fas fa-plus-circle me-2"></i>
+                  Nueva Categoría de Producto
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => {
+                    setShowCategoryModal(false);
+                    setNuevaCategoria({ nombre: '', codigo: '' });
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={(e) => { e.preventDefault(); agregarCategoria(); }}>
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label">
+                        <i className="fas fa-tag me-2 text-success"></i>
+                        Nombre de la Categoría *
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={nuevaCategoria.nombre}
+                        onChange={(e) => setNuevaCategoria({...nuevaCategoria, nombre: e.target.value})}
+                        placeholder="Ej: Bebidas, Snacks, Congelados..."
+                        required
+                      />
+                    </div>
+
+                    <div className="col-12">
+                      <label className="form-label">
+                        <i className="fas fa-code me-2 text-success"></i>
+                        Código (2-3 letras) *
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control text-uppercase"
+                        value={nuevaCategoria.codigo}
+                        onChange={(e) => setNuevaCategoria({...nuevaCategoria, codigo: e.target.value.toUpperCase()})}
+                        placeholder="Ej: BE, SN, CO"
+                        maxLength={3}
+                        pattern="[A-Za-z]{2,3}"
+                        required
+                      />
+                      <small className="text-muted">
+                        Este código se usará para generar los códigos de productos (Ej: BE001, BE002...)
+                      </small>
+                    </div>
+
+                    <div className="col-12">
+                      <div className="alert alert-info mb-0">
+                        <i className="fas fa-info-circle me-2"></i>
+                        <strong>Vista previa:</strong> {nuevaCategoria.nombre || 'Nombre de categoría'} ({nuevaCategoria.codigo || 'XX'}001)
+                      </div>
+                    </div>
+                  </div>
+                </form>
+
+                {/* Lista de categorías existentes */}
+                <div className="mt-4">
+                  <h6 className="border-bottom pb-2">
+                    <i className="fas fa-list me-2"></i>
+                    Categorías Existentes
+                  </h6>
+                  <div className="list-group" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    {categorias.map((cat) => (
+                      <div key={cat.value} className="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                          <strong>{cat.label}</strong>
+                          <span className="badge bg-secondary ms-2">{cat.codigo}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => eliminarCategoria(cat.value)}
+                          title="Eliminar categoría"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => {
+                    setShowCategoryModal(false);
+                    setNuevaCategoria({ nombre: '', codigo: '' });
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={agregarCategoria}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  Agregar Categoría
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes slideInRight {
           from {
@@ -2172,6 +2406,13 @@ export const Dashboard = () => {
             opacity: 1;
             transform: translateX(0);
           }
+        }
+
+        /* Estilo para hacer el SelectModerno más pequeño en el Dashboard */
+        .select-categoria-dashboard .select-moderno-trigger {
+          min-height: 38px !important;
+          height: 38px !important;
+          padding: 0.4rem 1rem !important;
         }
       `}</style>
     </div>
