@@ -165,13 +165,34 @@ export const Dashboard = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Datos para el gráfico (comienzan en 0, se actualizarán con ventas reales)
+  // Calcular ventas por mes basándose en los pedidos
+  const calcularVentasPorMes = () => {
+    const ventasMensuales = new Array(12).fill(0); // 12 meses
+    const añoActual = new Date().getFullYear();
+
+    pedidos.forEach((pedido) => {
+      if (pedido.estado !== 'cancelado') { // No contar pedidos cancelados
+        const fechaPedido = new Date(pedido.fecha);
+        if (fechaPedido.getFullYear() === añoActual) {
+          const mes = fechaPedido.getMonth(); // 0-11
+          ventasMensuales[mes] += pedido.total;
+        }
+      }
+    });
+
+    return ventasMensuales;
+  };
+
+  const ventasMensuales = calcularVentasPorMes();
+  const mesesDelAño = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  
+  // Datos para el gráfico con ventas reales
   const salesData = {
-    labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+    labels: mesesDelAño,
     datasets: [
       {
         label: 'Ventas (CLP)',
-        data: [0, 0, 0, 0, 0, 0], // TODO: Actualizar con datos reales de ventas
+        data: ventasMensuales,
         backgroundColor: 'rgba(46, 139, 87, 0.8)',
         borderColor: 'rgba(46, 139, 87, 1)',
         borderWidth: 1,
