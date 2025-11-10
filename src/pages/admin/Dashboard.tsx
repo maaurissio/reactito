@@ -323,52 +323,114 @@ export const Dashboard = () => {
             <div className="card-header bg-white">
               <h5 className="mb-0">Actividad Reciente</h5>
             </div>
-            <div className="card-body">
-              {totalVentas === 0 && totalPedidos === 0 ? (
-                <div className="text-center py-5">
-                  <i className="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                  <p className="text-muted">No hay actividad reciente</p>
-                  <small className="text-muted">
-                    La actividad aparecerá aquí cuando se realicen ventas, registros o cambios en el sistema
-                  </small>
-                </div>
-              ) : (
-                <div className="list-group list-group-flush">
-                  {/* Los productos con stock bajo */}
-                  {productos.filter(p => p.stock < 10).slice(0, 3).map((producto) => (
-                    <div key={producto.id} className="list-group-item border-0 px-0">
-                      <div className="d-flex align-items-center">
-                        <div className="flex-shrink-0">
-                          <div className="rounded-circle bg-warning bg-opacity-10 p-2">
-                            <i className="fas fa-exclamation-triangle text-warning"></i>
-                          </div>
-                        </div>
-                        <div className="flex-grow-1 ms-3">
-                          <p className="mb-0 small">Stock bajo: {producto.nombre}</p>
-                          <small className="text-muted">Quedan {producto.stock} unidades</small>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            <div className="card-body" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+              {(() => {
+                // Crear un array de actividades
+                const actividades: Array<{
+                  tipo: 'pedido' | 'usuario' | 'stock';
+                  fecha: string;
+                  descripcion: string;
+                  detalle: string;
+                  icono: string;
+                  color: string;
+                }> = [];
 
-                  {/* Últimos usuarios registrados */}
-                  {usuarios.slice(-2).reverse().map((usuario) => (
-                    <div key={usuario.id} className="list-group-item border-0 px-0">
-                      <div className="d-flex align-items-center">
-                        <div className="flex-shrink-0">
-                          <div className="rounded-circle bg-info bg-opacity-10 p-2">
-                            <i className="fas fa-user-plus text-info"></i>
+                // Agregar últimos pedidos (últimos 5)
+                pedidos.slice(-5).forEach(pedido => {
+                  actividades.push({
+                    tipo: 'pedido',
+                    fecha: pedido.fecha,
+                    descripcion: `Pedido #${pedido.id} - ${pedido.estado}`,
+                    detalle: `${pedido.contacto.nombre} - $${pedido.total.toLocaleString('es-CL')}`,
+                    icono: 'fa-shopping-cart',
+                    color: pedido.estado === 'entregado' ? 'success' : pedido.estado === 'cancelado' ? 'danger' : 'info'
+                  });
+                });
+
+                // Agregar últimos usuarios (últimos 3)
+                usuarios.slice(-3).forEach(usuario => {
+                  if (usuario.fechaRegistro) {
+                    actividades.push({
+                      tipo: 'usuario',
+                      fecha: usuario.fechaRegistro,
+                      descripcion: 'Nuevo usuario registrado',
+                      detalle: `${usuario.nombre} ${usuario.apellido}`,
+                      icono: 'fa-user-plus',
+                      color: 'primary'
+                    });
+                  }
+                });
+
+                // Agregar productos con stock bajo
+                productos.filter(p => p.stock < 10).slice(0, 3).forEach(producto => {
+                  actividades.push({
+                    tipo: 'stock',
+                    fecha: new Date().toISOString(),
+                    descripcion: '⚠️ Stock bajo',
+                    detalle: `${producto.nombre} - ${producto.stock} unidades`,
+                    icono: 'fa-exclamation-triangle',
+                    color: 'warning'
+                  });
+                });
+
+                // Ordenar por fecha descendente (más reciente primero)
+                actividades.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+                // Tomar solo las últimas 8 actividades
+                const actividadesRecientes = actividades.slice(0, 8);
+
+                if (actividadesRecientes.length === 0) {
+                  return (
+                    <div className="text-center py-5">
+                      <i className="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                      <p className="text-muted">No hay actividad reciente</p>
+                      <small className="text-muted">
+                        La actividad aparecerá aquí cuando se realicen pedidos, registros o cambios en el sistema
+                      </small>
+                    </div>
+                  );
+                }
+
+                const formatearTiempo = (fecha: string) => {
+                  const ahora = new Date();
+                  const fechaEvento = new Date(fecha);
+                  const diferencia = ahora.getTime() - fechaEvento.getTime();
+                  
+                  const minutos = Math.floor(diferencia / 60000);
+                  const horas = Math.floor(diferencia / 3600000);
+                  const dias = Math.floor(diferencia / 86400000);
+
+                  if (minutos < 1) return 'Hace un momento';
+                  if (minutos < 60) return `Hace ${minutos} min`;
+                  if (horas < 24) return `Hace ${horas}h`;
+                  if (dias < 7) return `Hace ${dias}d`;
+                  return fechaEvento.toLocaleDateString('es-CL');
+                };
+
+                return (
+                  <div className="list-group list-group-flush">
+                    {actividadesRecientes.map((actividad, index) => (
+                      <div key={index} className="list-group-item border-0 px-0 py-2">
+                        <div className="d-flex align-items-start">
+                          <div className="flex-shrink-0">
+                            <div className={`rounded-circle bg-${actividad.color} bg-opacity-10 p-2`}>
+                              <i className={`fas ${actividad.icono} text-${actividad.color}`}></i>
+                            </div>
+                          </div>
+                          <div className="flex-grow-1 ms-3">
+                            <p className="mb-0 small fw-semibold">{actividad.descripcion}</p>
+                            <small className="text-muted d-block">{actividad.detalle}</small>
+                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                              <i className="far fa-clock me-1"></i>
+                              {formatearTiempo(actividad.fecha)}
+                            </small>
                           </div>
                         </div>
-                        <div className="flex-grow-1 ms-3">
-                          <p className="mb-0 small">Usuario registrado: {usuario.nombre} {usuario.apellido}</p>
-                          <small className="text-muted">{usuario.email}</small>
-                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1027,18 +1089,23 @@ export const Dashboard = () => {
       <>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>Gestión de Pedidos ({pedidos.length})</h2>
-          <select 
-            className="form-select w-auto"
-            value={filtroEstadoPedido}
-            onChange={(e) => setFiltroEstadoPedido(e.target.value)}
-          >
-            <option value="">Todos los estados</option>
-            <option value="confirmado">Confirmado</option>
-            <option value="en-preparacion">En Preparación</option>
-            <option value="enviado">Enviado</option>
-            <option value="entregado">Entregado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
+          <div style={{ minWidth: '250px' }}>
+            <SelectModerno
+              label=""
+              value={filtroEstadoPedido}
+              onChange={(value) => setFiltroEstadoPedido(value)}
+              options={[
+                { value: '', label: 'Todos los estados' },
+                { value: 'confirmado', label: 'Confirmado' },
+                { value: 'en-preparacion', label: 'En Preparación' },
+                { value: 'enviado', label: 'Enviado' },
+                { value: 'entregado', label: 'Entregado' },
+                { value: 'cancelado', label: 'Cancelado' }
+              ]}
+              placeholder="Filtrar por estado"
+              icon="fas fa-filter"
+            />
+          </div>
         </div>
 
         {pedidosFiltrados.length === 0 ? (
@@ -1711,7 +1778,7 @@ export const Dashboard = () => {
                 </button>
                 <button 
                   type="button" 
-                  className="btn btn-primary" 
+                  className="btn btn-success" 
                   onClick={guardarEdicion}
                 >
                   <i className="fas fa-save me-2"></i>
@@ -1878,7 +1945,7 @@ export const Dashboard = () => {
                 </button>
                 <button 
                   type="button" 
-                  className="btn btn-primary" 
+                  className="btn btn-success" 
                   onClick={guardarEdicionUsuario}
                 >
                   <i className="fas fa-save me-2"></i>
@@ -2119,7 +2186,7 @@ export const Dashboard = () => {
                 </button>
                 <button 
                   type="button" 
-                  className="btn btn-primary" 
+                  className="btn btn-success" 
                   onClick={guardarEstadoPedido}
                 >
                   <i className="fas fa-save me-2"></i>
@@ -2137,7 +2204,7 @@ export const Dashboard = () => {
           <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header bg-success text-white">
-                <h5 className="modal-title">
+                <h5 className="modal-title text-white">
                   <i className="fas fa-user-plus me-2"></i>
                   Agregar Nuevo Usuario
                 </h5>
