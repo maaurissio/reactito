@@ -137,15 +137,15 @@ export const Login = () => {
                       <div className="mb-3">
                         <div className="input-icon-container">
                           <input 
-                            type="email" 
+                            type="text" 
                             className="form-control form-control-lg" 
-                            placeholder="Correo Electrónico" 
+                            placeholder="Usuario o Correo Electrónico" 
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             disabled={isLoading}
                           />
-                          <i className="fas fa-envelope input-icon"></i>
+                          <i className="fas fa-user input-icon"></i>
                         </div>
                       </div>
 
