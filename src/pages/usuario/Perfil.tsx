@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId, eliminarCuentaConConfirmacion } from '../../services/usuarios.service';
+import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId, eliminarCuentaConConfirmacion, guardarSesionActiva } from '../../services/usuarios.service';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { obtenerPedidosUsuario, type IPedido } from '../../services/pedidos.service';
 
@@ -123,6 +123,13 @@ export const Perfil = () => {
     });
 
     if (resultado) {
+      // Actualizar la sesión activa con los nuevos datos
+      guardarSesionActiva({
+        ...user,
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+      });
+      
       setMessage({ type: 'success', text: 'Perfil actualizado correctamente' });
       setEditMode(false);
       checkAuth(); // Actualizar datos en el store
