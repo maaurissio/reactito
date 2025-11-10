@@ -184,6 +184,70 @@ export function iniciarSesion(emailOUsuario: string, password: string): ISesionA
   return sesion;
 }
 
+// Nueva función para obtener información detallada del login
+export function intentarIniciarSesion(emailOUsuario: string, password: string): {
+  success: boolean;
+  sesion?: ISesionActiva;
+  error?: 'CUENTA_INEXISTENTE' | 'CREDENCIALES_INCORRECTAS' | 'CUENTA_INACTIVA';
+} {
+  const datos = obtenerDatosUsuarios();
+  
+  // Buscar si existe un usuario con ese email o nombre de usuario
+  const usuarioExistente = datos.usuarios.find(
+    (u) => u.email === emailOUsuario || u.usuario === emailOUsuario
+  );
+
+  // Si no existe el usuario
+  if (!usuarioExistente) {
+    return {
+      success: false,
+      error: 'CUENTA_INEXISTENTE'
+    };
+  }
+
+  // Si existe pero está inactivo
+  if (usuarioExistente.isActivo !== Estado.activo) {
+    return {
+      success: false,
+      error: 'CUENTA_INACTIVA'
+    };
+  }
+
+  // Si existe pero la contraseña es incorrecta
+  if (usuarioExistente.password !== password) {
+    return {
+      success: false,
+      error: 'CREDENCIALES_INCORRECTAS'
+    };
+  }
+
+  // Si todo está correcto, crear la sesión
+  let avatarNormalizado = usuarioExistente.avatar;
+  if (avatarNormalizado && !avatarNormalizado.startsWith('/') && !avatarNormalizado.startsWith('http')) {
+    avatarNormalizado = '/' + avatarNormalizado;
+  }
+
+  const sesion: ISesionActiva = {
+    id: usuarioExistente.id,
+    usuario: usuarioExistente.usuario,
+    email: usuarioExistente.email,
+    nombre: usuarioExistente.nombre,
+    apellido: usuarioExistente.apellido,
+    rol: usuarioExistente.rol,
+    fechaLogin: new Date().toISOString(),
+    telefono: usuarioExistente.telefono,
+    direccion: usuarioExistente.direccion,
+    avatar: avatarNormalizado,
+  };
+
+  guardarSesionActiva(sesion);
+  
+  return {
+    success: true,
+    sesion
+  };
+}
+
 export function cerrarSesion(): void {
   localStorage.removeItem(CLAVE_SESION_ACTIVA);
 }

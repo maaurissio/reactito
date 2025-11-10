@@ -736,22 +736,24 @@ export const Perfil = () => {
                     </div>
 
                     {/* Zona de peligro - Eliminar cuenta */}
-                    <div className="border border-danger rounded p-3 mt-4">
-                      <h6 className="text-danger mb-3">
-                        <i className="fas fa-exclamation-triangle me-2"></i>
-                        Zona de Peligro
-                      </h6>
-                      <p className="text-muted small mb-3">
-                        Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate de esto.
-                      </p>
-                      <button 
-                        className="btn btn-danger"
-                        onClick={() => setShowDeleteModal(true)}
-                      >
-                        <i className="fas fa-trash-alt me-2"></i>
-                        Eliminar mi cuenta
-                      </button>
-                    </div>
+                    {user?.rol === 'cliente' && (
+                      <div className="border border-danger rounded p-3 mt-4">
+                        <h6 className="text-danger mb-3">
+                          <i className="fas fa-exclamation-triangle me-2"></i>
+                          Zona de Peligro
+                        </h6>
+                        <p className="text-muted small mb-3">
+                          Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate de esto.
+                        </p>
+                        <button 
+                          className="btn btn-danger"
+                          onClick={() => setShowDeleteModal(true)}
+                        >
+                          <i className="fas fa-trash-alt me-2"></i>
+                          Eliminar mi cuenta
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
