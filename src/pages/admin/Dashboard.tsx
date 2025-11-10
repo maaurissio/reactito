@@ -211,6 +211,17 @@ export const Dashboard = () => {
         display: false,
       },
     },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1000, // Incrementos de 1000
+          callback: function(value: any) {
+            return '$' + value.toLocaleString('es-CL');
+          }
+        }
+      }
+    }
   };
 
   const renderDashboard = () => (
