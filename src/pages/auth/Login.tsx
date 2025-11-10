@@ -23,7 +23,7 @@ export const Login = () => {
     try {
       const resultado = await login(email, password);
       
-      if (resultado) {
+      if (resultado.success) {
         setSuccess(true);
         // Redirigir después de un momento
         setTimeout(() => {
@@ -36,12 +36,41 @@ export const Login = () => {
           }
         }, 1500);
       } else {
-        setError('Credenciales incorrectas');
+        // Determinar el mensaje de error según el tipo
+        let mensajeError = '';
+        switch (resultado.error) {
+          case 'CUENTA_INEXISTENTE':
+            mensajeError = 'Cuenta inexistente';
+            break;
+          case 'CREDENCIALES_INCORRECTAS':
+            mensajeError = 'Credenciales incorrectas';
+            break;
+          case 'CUENTA_INACTIVA':
+            mensajeError = 'Cuenta desactivada';
+            break;
+          default:
+            mensajeError = 'Error de inicio de sesión';
+        }
+        
+        setError(mensajeError);
         setIsLoading(false);
+        
+        // Auto-actualizar el mensaje después de 2 segundos
+        setTimeout(() => {
+          setError('');
+          // Cambiar el texto del botón de vuelta a "Iniciar Sesión"
+          setIsLoading(false);
+        }, 2000);
       }
     } catch (err) {
       setError('Error de conexión');
       setIsLoading(false);
+      
+      // También auto-actualizar este mensaje después de 2 segundos
+      setTimeout(() => {
+        setError('');
+        setIsLoading(false);
+      }, 2000);
     }
   };
 
