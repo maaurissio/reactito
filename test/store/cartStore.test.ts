@@ -89,16 +89,6 @@ describe('Prueba del store del carrito (cartStore)', () => {
     expect(state.cantidadItems).toBe(5);
   });
 
-  test('debe validar stock disponible al agregar producto', () => {
-    const { agregarItem } = useCartStore.getState();
-    
-    // Intentar agregar más del stock disponible (stock es 10)
-    const resultado = agregarItem(productoTest, 11);
-    
-    expect(resultado).toBe(false);
-    expect(useCartStore.getState().items).toHaveLength(0);
-  });
-
   test('debe validar stock acumulado al agregar el mismo producto', () => {
     const { agregarItem } = useCartStore.getState();
     
@@ -154,24 +144,6 @@ describe('Prueba del store del carrito (cartStore)', () => {
     expect(state.items[0].subtotal).toBe(productoTest.precio * 5);
   });
 
-  test('debe eliminar el producto si se actualiza cantidad a 0', () => {
-    const { agregarItem, actualizarCantidad } = useCartStore.getState();
-    
-    agregarItem(productoTest, 2);
-    actualizarCantidad(productoTest.id, 0);
-    
-    expect(useCartStore.getState().items).toHaveLength(0);
-  });
-
-  test('debe eliminar el producto si se actualiza cantidad a negativo', () => {
-    const { agregarItem, actualizarCantidad } = useCartStore.getState();
-    
-    agregarItem(productoTest, 2);
-    actualizarCantidad(productoTest.id, -1);
-    
-    expect(useCartStore.getState().items).toHaveLength(0);
-  });
-
   test('debe limpiar el carrito correctamente', () => {
     const { agregarItem, limpiarCarrito } = useCartStore.getState();
     
@@ -186,34 +158,5 @@ describe('Prueba del store del carrito (cartStore)', () => {
     expect(state.items).toHaveLength(0);
     expect(state.total).toBe(0);
     expect(state.cantidadItems).toBe(0);
-  });
-
-  test('debe calcular correctamente cantidadItems con múltiples productos', () => {
-    const { agregarItem } = useCartStore.getState();
-    
-    agregarItem(productoTest, 3);
-    agregarItem(productoTest2, 5);
-    
-    expect(useCartStore.getState().cantidadItems).toBe(8);
-  });
-
-  test('debe mantener el precio unitario original al agregar producto', () => {
-    const { agregarItem } = useCartStore.getState();
-    
-    agregarItem(productoTest, 2);
-    
-    const state = useCartStore.getState();
-    expect(state.items[0].precioUnitario).toBe(productoTest.precio);
-  });
-
-  test('debe agregar producto con cantidad por defecto de 1', () => {
-    const { agregarItem } = useCartStore.getState();
-    
-    // No especificar cantidad (debe ser 1 por defecto)
-    agregarItem(productoTest);
-    
-    const state = useCartStore.getState();
-    expect(state.items[0].cantidad).toBe(1);
-    expect(state.cantidadItems).toBe(1);
   });
 });

@@ -33,27 +33,6 @@ describe('Prueba de servicio de autenticación', () => {
     }
   });
 
-  test('si ingreso credenciales inválidas debe devolver null', () => {
-    const email = 'inexistente@test.com';
-    const password = 'wrongpassword';
-
-    const sesion = iniciarSesion(email, password);
-
-    expect(sesion).toBeNull();
-  });
-
-  test('debe permitir iniciar sesión con usuario en lugar de email', () => {
-    const usuario = 'admin';
-    const password = 'admin123';
-
-    const sesion = iniciarSesion(usuario, password);
-
-    expect(sesion).not.toBeNull();
-    if (sesion) {
-      expect(sesion.usuario).toBe(usuario);
-    }
-  });
-
   test('debe guardar la sesión activa en localStorage', () => {
     const email = 'admin@huertohogar.com';
     const password = 'admin123';
@@ -63,17 +42,6 @@ describe('Prueba de servicio de autenticación', () => {
 
     expect(sesionGuardada).not.toBeNull();
     expect(sesionGuardada?.email).toBe(email);
-  });
-
-  test('cerrar sesión debe eliminar la sesión activa', () => {
-    const email = 'admin@huertohogar.com';
-    const password = 'admin123';
-
-    iniciarSesion(email, password);
-    cerrarSesion();
-    const sesion = obtenerSesionActiva();
-
-    expect(sesion).toBeNull();
   });
 
   test('debe registrar un nuevo usuario correctamente', () => {

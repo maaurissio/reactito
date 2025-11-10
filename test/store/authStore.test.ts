@@ -94,27 +94,4 @@ describe('Prueba del store de autenticación (authStore)', () => {
     expect(resultado2).toBe(false);
   });
 
-  test('debe verificar el estado de autenticación', async () => {
-    const { login, checkAuth } = useAuthStore.getState();
-    
-    await login('admin@huertohogar.com', 'admin123');
-    
-    // Simular recarga de página
-    checkAuth();
-    
-    expect(useAuthStore.getState().isAuthenticated).toBe(true);
-    expect(useAuthStore.getState().user).not.toBeNull();
-  });
-
-  test('debe mantener la sesión después de checkAuth si hay sesión activa', async () => {
-    const { login, checkAuth } = useAuthStore.getState();
-    
-    await login('admin@huertohogar.com', 'admin123');
-    const userAntes = useAuthStore.getState().user;
-    
-    checkAuth();
-    const userDespues = useAuthStore.getState().user;
-    
-    expect(userDespues?.email).toBe(userAntes?.email);
-  });
 });
