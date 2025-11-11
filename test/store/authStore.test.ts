@@ -23,7 +23,7 @@ describe('Prueba del store de autenticación (authStore)', () => {
     
     const resultado = await login('admin@huertohogar.com', 'admin123');
     
-    expect(resultado).toBe(true);
+    expect(resultado.success).toBe(true);
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().user).not.toBeNull();
     expect(useAuthStore.getState().user?.email).toBe('admin@huertohogar.com');
@@ -34,7 +34,8 @@ describe('Prueba del store de autenticación (authStore)', () => {
     
     const resultado = await login('wrong@test.com', 'wrongpassword');
     
-    expect(resultado).toBe(false);
+    expect(resultado.success).toBe(false);
+    expect(resultado.error).toBe('CUENTA_INEXISTENTE');
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().user).toBeNull();
   });
