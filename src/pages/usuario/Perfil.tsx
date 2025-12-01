@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId, eliminarCuentaConConfirmacion, guardarSesionActiva } from '../../services/usuarios.service';
+import { actualizarUsuario, cambiarPassword, obtenerUsuarioPorId, eliminarCuentaConConfirmacion } from '../../services/usuarios.api.service';
+import { guardarSesionActiva } from '../../services/auth.service';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { obtenerPedidosUsuario, type IPedido } from '../../services/pedidos.service';
+import { obtenerPedidosUsuario, type IPedido } from '../../services/pedidos.api.service';
 
 export const Perfil = () => {
   const { user, isAuthenticated, checkAuth } = useAuthStore();
@@ -36,24 +37,33 @@ export const Perfil = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      const usuarioCompleto = obtenerUsuarioPorId(user.id);
-      if (usuarioCompleto) {
-        setFormData({
-          nombre: usuarioCompleto.nombre,
-          apellido: usuarioCompleto.apellido || '',
-          email: usuarioCompleto.email,
-          telefono: usuarioCompleto.telefono || '',
-          direccion: usuarioCompleto.direccion || '',
-          avatar: usuarioCompleto.avatar || '',
-        });
-        setAvatarPreview(usuarioCompleto.avatar || '');
+    const cargarDatosUsuario = async () => {
+      if (user) {
+        try {
+          const usuarioCompleto = await obtenerUsuarioPorId(user.id);
+          if (usuarioCompleto) {
+            setFormData({
+              nombre: usuarioCompleto.nombre,
+              apellido: usuarioCompleto.apellido || '',
+              email: usuarioCompleto.email,
+              telefono: usuarioCompleto.telefono || '',
+              direccion: usuarioCompleto.direccion || '',
+              avatar: usuarioCompleto.avatar || '',
+            });
+            setAvatarPreview(usuarioCompleto.avatar || '');
+          }
+          
+          // Cargar pedidos del usuario
+          console.log('Cargando pedidos para:', user.email);
+          const pedidosUsuario = await obtenerPedidosUsuario(user.email);
+          console.log('Pedidos recibidos:', pedidosUsuario);
+          setPedidos(pedidosUsuario.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
+        } catch (error) {
+          console.error('Error cargando datos del usuario:', error);
+        }
       }
-      
-      // Cargar pedidos del usuario
-      const pedidosUsuario = obtenerPedidosUsuario(user.email);
-      setPedidos(pedidosUsuario.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
-    }
+    };
+    cargarDatosUsuario();
   }, [user]);
 
   if (!isAuthenticated) {
@@ -110,36 +120,41 @@ export const Perfil = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) return;
 
-    const resultado = actualizarUsuario(user.id, {
-      nombre: formData.nombre,
-      apellido: formData.apellido,
-      telefono: formData.telefono,
-      direccion: formData.direccion,
-    });
-
-    if (resultado) {
-      // Actualizar la sesión activa con los nuevos datos
-      guardarSesionActiva({
-        ...user,
+    try {
+      const resultado = await actualizarUsuario(user.id, {
         nombre: formData.nombre,
         apellido: formData.apellido,
+        telefono: formData.telefono,
+        direccion: formData.direccion,
       });
-      
-      setMessage({ type: 'success', text: 'Perfil actualizado correctamente' });
-      setEditMode(false);
-      checkAuth(); // Actualizar datos en el store
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-    } else {
+
+      if (resultado.success) {
+        // Actualizar la sesión activa con los nuevos datos
+        guardarSesionActiva({
+          ...user,
+          nombre: formData.nombre,
+          apellido: formData.apellido,
+        });
+        
+        setMessage({ type: 'success', text: 'Perfil actualizado correctamente' });
+        setEditMode(false);
+        checkAuth(); // Actualizar datos en el store
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } else {
+        setMessage({ type: 'error', text: 'Error al actualizar el perfil' });
+      }
+    } catch (error) {
+      console.error('Error actualizando perfil:', error);
       setMessage({ type: 'error', text: 'Error al actualizar el perfil' });
     }
   };
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) return;
@@ -154,15 +169,20 @@ export const Perfil = () => {
       return;
     }
 
-    const exito = cambiarPassword(user.id, passwordData.passwordActual, passwordData.passwordNueva);
+    try {
+      const resultado = await cambiarPassword(user.id, passwordData.passwordActual, passwordData.passwordNueva);
 
-    if (exito) {
-      setMessage({ type: 'success', text: 'Contraseña cambiada correctamente' });
-      setShowPasswordChange(false);
-      setPasswordData({ passwordActual: '', passwordNueva: '', confirmarPassword: '' });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-    } else {
-      setMessage({ type: 'error', text: 'La contraseña actual es incorrecta' });
+      if (resultado.success) {
+        setMessage({ type: 'success', text: 'Contraseña cambiada correctamente' });
+        setShowPasswordChange(false);
+        setPasswordData({ passwordActual: '', passwordNueva: '', confirmarPassword: '' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } else {
+        setMessage({ type: 'error', text: resultado.error || 'La contraseña actual es incorrecta' });
+      }
+    } catch (error) {
+      console.error('Error cambiando contraseña:', error);
+      setMessage({ type: 'error', text: 'Error al cambiar la contraseña' });
     }
   };
 
@@ -258,43 +278,55 @@ export const Perfil = () => {
     reader.readAsDataURL(file);
   };
 
-  const guardarAvatar = () => {
+  const guardarAvatar = async () => {
     if (!user || !avatarPreview) return;
 
-    const resultado = actualizarUsuario(user.id, {
-      avatar: avatarPreview,
-    });
+    try {
+      const resultado = await actualizarUsuario(user.id, {
+        avatar: avatarPreview,
+      });
 
-    if (resultado) {
-      setFormData({ ...formData, avatar: avatarPreview });
-      setMessage({ type: 'success', text: 'Foto de perfil actualizada correctamente' });
-      setShowAvatarModal(false);
-      checkAuth();
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-    } else {
+      if (resultado.success) {
+        setFormData({ ...formData, avatar: avatarPreview });
+        setMessage({ type: 'success', text: 'Foto de perfil actualizada correctamente' });
+        setShowAvatarModal(false);
+        checkAuth();
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } else {
+        setMessage({ type: 'error', text: 'Error al actualizar la foto de perfil' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      }
+    } catch (error) {
+      console.error('Error actualizando avatar:', error);
       setMessage({ type: 'error', text: 'Error al actualizar la foto de perfil' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     }
   };
 
-  const eliminarAvatar = () => {
+  const eliminarAvatar = async () => {
     if (!user) return;
 
-    const resultado = actualizarUsuario(user.id, {
-      avatar: '',
-    });
+    try {
+      const resultado = await actualizarUsuario(user.id, {
+        avatar: '',
+      });
 
-    if (resultado) {
-      setFormData({ ...formData, avatar: '' });
-      setAvatarPreview('');
-      setMessage({ type: 'success', text: 'Foto de perfil eliminada' });
-      setShowAvatarModal(false);
-      checkAuth();
+      if (resultado.success) {
+        setFormData({ ...formData, avatar: '' });
+        setAvatarPreview('');
+        setMessage({ type: 'success', text: 'Foto de perfil eliminada' });
+        setShowAvatarModal(false);
+        checkAuth();
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      }
+    } catch (error) {
+      console.error('Error eliminando avatar:', error);
+      setMessage({ type: 'error', text: 'Error al eliminar la foto de perfil' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     }
   };
 
-  const handleDeleteAccount = (e: React.FormEvent) => {
+  const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) return;
@@ -313,16 +345,22 @@ export const Perfil = () => {
       return;
     }
 
-    // Intentar eliminar la cuenta
-    const exito = eliminarCuentaConConfirmacion(user.id, deleteData.password);
+    try {
+      // Intentar eliminar la cuenta
+      const exito = await eliminarCuentaConConfirmacion(user.id, deleteData.password);
 
-    if (exito) {
-      setMessage({ type: 'success', text: 'Tu cuenta ha sido eliminada exitosamente' });
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
-    } else {
-      setMessage({ type: 'error', text: 'Contraseña incorrecta. No se pudo eliminar la cuenta' });
+      if (exito) {
+        setMessage({ type: 'success', text: 'Tu cuenta ha sido eliminada exitosamente' });
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      } else {
+        setMessage({ type: 'error', text: 'Contraseña incorrecta. No se pudo eliminar la cuenta' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      }
+    } catch (error) {
+      console.error('Error eliminando cuenta:', error);
+      setMessage({ type: 'error', text: 'Error al eliminar la cuenta' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     }
   };

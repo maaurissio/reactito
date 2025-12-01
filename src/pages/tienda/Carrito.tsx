@@ -1,12 +1,21 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useCartStore } from '../../store';
+import { useCartStore, useAuthStore } from '../../store';
 
 export const Carrito = () => {
   const navigate = useNavigate();
   const { items, total, cantidadItems, eliminarItem, actualizarCantidad, limpiarCarrito } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   const handleCheckout = () => {
     if (items.length === 0) return;
+    
+    if (!isAuthenticated) {
+      // Guardar la página de destino para después del login
+      localStorage.setItem('paginaOrigen', '/checkout');
+      navigate('/login');
+      return;
+    }
+    
     navigate('/checkout');
   };
 
@@ -106,8 +115,15 @@ export const Carrito = () => {
             className="btn btn-success btn-lg btn-full-width"
             onClick={handleCheckout}
           >
-            Proceder al Pago
+            {isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Comprar'}
           </button>
+
+          {!isAuthenticated && (
+            <p className="text-center mt-2 mb-0" style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+              <i className="fas fa-info-circle me-1"></i>
+              Debes iniciar sesión para realizar tu compra
+            </p>
+          )}
 
           <button
             type="button"

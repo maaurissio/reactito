@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { solicitarRecuperacionPassword, verificarCodigoRecuperacion, restablecerPassword } from '../../services/usuarios.service';
+import { solicitarRecuperacionPassword, verificarCodigoRecuperacion, restablecerPassword } from '../../services/auth.service';
 
 enum Paso {
   EMAIL = 1,
@@ -18,7 +18,6 @@ export const RecuperarPassword = () => {
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [codigoGenerado, setCodigoGenerado] = useState(''); // Solo para desarrollo
   
   const navigate = useNavigate();
 
@@ -28,10 +27,9 @@ export const RecuperarPassword = () => {
     setIsLoading(true);
 
     try {
-      const resultado = solicitarRecuperacionPassword(email);
+      const resultado = await solicitarRecuperacionPassword(email);
       
       if (resultado.success) {
-        setCodigoGenerado(resultado.codigo || ''); // Solo para desarrollo
         setPaso(Paso.CODIGO);
       } else {
         setError(resultado.mensaje);
@@ -49,7 +47,7 @@ export const RecuperarPassword = () => {
     setIsLoading(true);
 
     try {
-      const valido = verificarCodigoRecuperacion(email, codigo);
+      const valido = await verificarCodigoRecuperacion(email, codigo);
       
       if (valido) {
         setPaso(Paso.NUEVA_PASSWORD);
@@ -80,7 +78,7 @@ export const RecuperarPassword = () => {
     setIsLoading(true);
 
     try {
-      const exito = restablecerPassword(email, codigo, nuevaPassword);
+      const exito = await restablecerPassword(email, codigo, nuevaPassword);
       
       if (exito) {
         setPaso(Paso.EXITO);
@@ -151,19 +149,6 @@ export const RecuperarPassword = () => {
       <div className="alert mb-4" style={{ background: 'rgba(52, 199, 89, 0.1)', border: '1px solid rgba(52, 199, 89, 0.2)', color: '#1d1d1f' }}>
         <i className="fas fa-info-circle me-2" style={{ color: 'var(--green-primary)' }}></i>
         Hemos enviado un código de 6 dígitos a <strong>{email}</strong>
-        {codigoGenerado && (
-          <div className="mt-3 p-3 text-center" style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '12px', border: '2px dashed var(--green-primary)' }}>
-            <small style={{ color: '#6e6e73', display: 'block', marginBottom: '8px' }}>
-              <strong>Código de desarrollo:</strong>
-            </small>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', letterSpacing: '0.5rem', color: 'var(--green-primary)', fontFamily: 'monospace' }}>
-              {codigoGenerado}
-            </div>
-            <small style={{ color: '#86868b', display: 'block', marginTop: '8px' }}>
-              Copia este código para pruebas
-            </small>
-          </div>
-        )}
       </div>
 
       <div className="mb-4">

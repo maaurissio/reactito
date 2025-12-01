@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
 import { useProductsStore } from '../../store/productsStore';
-import { crearPedido } from '../../services/pedidos.service';
+import { crearPedido } from '../../services/pedidos.api.service';
 import { calcularCostoEnvio } from '../../services/shippingConfig.service';
 import { Estado } from '../../types/models';
 import { SelectModerno } from '../../components/ui';
@@ -57,8 +57,6 @@ export const Checkout = () => {
   const { items, total, limpiarCarrito } = useCartStore();
   const { actualizarStock } = useProductsStore();
   
-  const [paso, setPaso] = useState<'tipo' | 'formulario'>('tipo');
-  
   // Datos del formulario
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -90,14 +88,22 @@ export const Checkout = () => {
   }, []);
 
   useEffect(() => {
+    // Redirigir si no está autenticado
+    if (!isAuthenticated) {
+      // Guardar la página actual para volver después del login
+      localStorage.setItem('paginaOrigen', '/checkout');
+      navigate('/login');
+      return;
+    }
+
     // Verificar si hay items en el carrito
     if (items.length === 0) {
       navigate('/catalogo');
       return;
     }
 
-    // Pre-llenar datos si el usuario está autenticado
-    if (isAuthenticated && user) {
+    // Pre-llenar datos del usuario autenticado
+    if (user) {
       const nombres = user.nombre?.split(' ') || [];
       setNombre(nombres[0] || '');
       setApellido(user.apellido || nombres.slice(1).join(' ') || '');
@@ -133,10 +139,6 @@ export const Checkout = () => {
     setTimeout(() => {
       setShowToast(false);
     }, 3000);
-  };
-
-  const seleccionarTipo = (_tipo: 'user' | 'guest' | 'register') => {
-    setPaso('formulario');
   };
 
   const validarFormulario = (): boolean => {
@@ -197,7 +199,7 @@ export const Checkout = () => {
 
       console.log('Costos - Envío:', costoEnvio, 'Total:', totalFinal);
 
-      const resultado = crearPedido(
+      const resultado = await crearPedido(
         user ? { ...user, password: '', isActivo: Estado.activo } : null,
         {
           nombre,
@@ -228,7 +230,7 @@ export const Checkout = () => {
         // Actualizar stock de productos
         for (const item of items) {
           const nuevoStock = Math.max(0, item.producto.stock - item.cantidad);
-          actualizarStock(item.producto.id, nuevoStock);
+          await actualizarStock(item.producto.id, nuevoStock);
           console.log(`Stock actualizado para ${item.producto.nombre}: ${nuevoStock}`);
         }
 
@@ -261,9 +263,10 @@ export const Checkout = () => {
     }
   };
 
-  const volver = () => {
-    setPaso('tipo');
-  };
+  // Si no está autenticado, no renderizar nada (el useEffect redirige)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="checkout-page bg-light" style={{ minHeight: '100vh' }}>
@@ -278,9 +281,15 @@ export const Checkout = () => {
               <p className="mb-0 mt-1 small">Completa tu pedido de productos frescos y naturales</p>
             </div>
             <div className="col-md-4 text-end">
-              <div className="d-flex align-items-center justify-content-end">
-                <i className="fas fa-lock me-2"></i>
-                <span className="small">Compra segura</span>
+              <div className="d-flex align-items-center justify-content-end gap-3">
+                <div>
+                  <i className="fas fa-user-check me-2"></i>
+                  <span className="small">{user?.nombre}</span>
+                </div>
+                <div>
+                  <i className="fas fa-lock me-2"></i>
+                  <span className="small">Compra segura</span>
+                </div>
               </div>
             </div>
           </div>
@@ -293,111 +302,24 @@ export const Checkout = () => {
           <div className="row g-3">
             {/* Columna izquierda - Formularios */}
             <div className="col-lg-8">
-              
-              {/* Paso 1: Tipo de compra */}
-              {paso === 'tipo' && (
-                <div className="card shadow-sm mb-3">
-                  <div className="card-header bg-light py-2">
-                    <h5 className="mb-0">
-                      <i className="fas fa-user-circle me-2 text-success"></i>
-                      Paso 1: ¿Cómo deseas realizar tu compra?
-                    </h5>
-                  </div>
-                  <div className="card-body p-3">
-                    
-                    {/* Usuario logueado */}
-                    {isAuthenticated ? (
-                      <div>
-                        <div className="card border-success bg-light">
-                          <div className="card-body p-3">
-                            <div className="d-flex align-items-center">
-                              <i className="fas fa-check-circle text-success me-3 fs-5"></i>
-                              <div>
-                                <h6 className="mb-1 text-success">¡Perfecto! Ya tienes una cuenta</h6>
-                                <p className="mb-0 small text-muted">
-                                  Continúa con tus datos guardados: <span className="fw-bold text-dark">{user?.email}</span>
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <button className="btn btn-success mt-3" onClick={() => seleccionarTipo('user')}>
-                          <i className="fas fa-arrow-right me-2"></i>Continuar como usuario registrado
-                        </button>
-                      </div>
-                    ) : (
-                      // Usuario no logueado
-                      <div>
-                        <div className="row g-3">
-                          <div className="col-md-6">
-                            <div 
-                              className="card h-100 border-2 checkout-option" 
-                              onClick={() => seleccionarTipo('guest')}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <div className="card-body text-center">
-                                <i className="fas fa-user-clock display-4 text-success mb-3"></i>
-                                <h6 className="card-title">Comprar como invitado</h6>
-                                <p className="card-text small text-muted">
-                                  Realiza tu compra rápidamente sin crear una cuenta
-                                </p>
-                                <ul className="list-unstyled small text-muted">
-                                  <li><i className="fas fa-check text-success me-2"></i>Proceso rápido</li>
-                                  <li><i className="fas fa-check text-success me-2"></i>Sin registro necesario</li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
 
-                          <div className="col-md-6">
-                            <div 
-                              className="card h-100 border-2 checkout-option" 
-                              onClick={() => seleccionarTipo('register')}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <div className="card-body text-center">
-                                <i className="fas fa-user-plus display-4 text-success mb-3"></i>
-                                <h6 className="card-title">Crear cuenta nueva</h6>
-                                <p className="card-text small text-muted">
-                                  Crea una cuenta para guardar tus datos y pedidos
-                                </p>
-                                <ul className="list-unstyled small text-muted">
-                                  <li><i className="fas fa-check text-success me-2"></i>Historial de pedidos</li>
-                                  <li><i className="fas fa-check text-success me-2"></i>Datos guardados</li>
-                                  <li><i className="fas fa-check text-success me-2"></i>Ofertas exclusivas</li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 text-center">
-                          <p className="small text-muted">
-                            ¿Ya tienes cuenta?{' '}
-                            <a href="/login" className="text-success text-decoration-none">
-                              <i className="fas fa-sign-in-alt me-1"></i>Inicia sesión aquí
-                            </a>
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Paso 2: Formulario de contacto y envío */}
-              {paso === 'formulario' && (
-                <div className="card shadow-sm mb-3">
-                  <div className="card-header bg-light py-2">
+              {/* Formulario de contacto y envío */}
+              <div className="card shadow-sm mb-3">
+                <div className="card-header bg-light py-2">
+                  <div className="d-flex align-items-center justify-content-between">
                     <h5 className="mb-0">
                       <i className="fas fa-address-card me-2 text-success"></i>
-                      Paso 2: Datos de contacto y envío
+                      Datos de contacto y envío
                     </h5>
+                    <span className="badge bg-success">
+                      <i className="fas fa-check me-1"></i>Usuario verificado
+                    </span>
                   </div>
-                  <div className="card-body p-3">
-                    <form onSubmit={(e) => { e.preventDefault(); procesarPedido(); }}>
-                      <div className="row g-2">
-                        {/* Datos personales */}
+                </div>
+                <div className="card-body p-3">
+                  <form onSubmit={(e) => { e.preventDefault(); procesarPedido(); }}>
+                    <div className="row g-2">
+                      {/* Datos personales */}
                         <div className="col-12 mt-2">
                           <h6 className="text-success mb-2">
                             <i className="fas fa-user me-2"></i>Información personal
@@ -526,23 +448,22 @@ export const Checkout = () => {
                             </>
                           ) : (
                             <>
-                              <i className="fas fa-credit-card me-2"></i>Continuar al pago
+                              <i className="fas fa-credit-card me-2"></i>Confirmar Pedido
                             </>
                           )}
                         </button>
                         <button 
                           type="button" 
                           className="btn btn-outline-secondary btn-lg ms-2" 
-                          onClick={volver}
+                          onClick={() => navigate('/carrito')}
                           disabled={procesando}
                         >
-                          <i className="fas fa-arrow-left me-2"></i>Volver
+                          <i className="fas fa-arrow-left me-2"></i>Volver al carrito
                         </button>
                       </div>
                     </form>
                   </div>
                 </div>
-              )}
             </div>
 
             {/* Columna derecha - Resumen del pedido */}

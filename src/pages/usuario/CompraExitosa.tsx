@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import type { IPedido } from '../../services/pedidos.service';
+import type { IPedido } from '../../services/pedidos.api.service';
 
 export const CompraExitosa = () => {
   const navigate = useNavigate();

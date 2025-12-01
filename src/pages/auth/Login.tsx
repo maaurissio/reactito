@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store';
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,37 +41,33 @@ export const Login = () => {
         let mensajeError = '';
         switch (resultado.error) {
           case 'CUENTA_INEXISTENTE':
-            mensajeError = 'Cuenta inexistente';
+            mensajeError = 'El usuario o correo no existe';
             break;
           case 'CREDENCIALES_INCORRECTAS':
-            mensajeError = 'Credenciales incorrectas';
+            mensajeError = 'Contraseña incorrecta';
             break;
           case 'CUENTA_INACTIVA':
-            mensajeError = 'Cuenta desactivada';
+            mensajeError = 'Tu cuenta está desactivada';
             break;
           default:
-            mensajeError = 'Error de inicio de sesión';
+            mensajeError = 'Error al iniciar sesión';
         }
         
         setError(mensajeError);
         setIsLoading(false);
         
-        // Auto-actualizar el mensaje después de 2 segundos
+        // Auto-actualizar el mensaje después de 3 segundos
         setTimeout(() => {
           setError('');
-          // Cambiar el texto del botón de vuelta a "Iniciar Sesión"
-          setIsLoading(false);
-        }, 2000);
+        }, 3000);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError('Error de conexión con el servidor');
       setIsLoading(false);
       
-      // También auto-actualizar este mensaje después de 2 segundos
       setTimeout(() => {
         setError('');
-        setIsLoading(false);
-      }, 2000);
+      }, 3000);
     }
   };
 
@@ -150,17 +147,34 @@ export const Login = () => {
                       </div>
 
                       <div className="mb-4">
-                        <div className="input-icon-container">
+                        <div className="input-icon-container position-relative">
                           <input 
-                            type="password" 
+                            type={showPassword ? "text" : "password"} 
                             className="form-control form-control-lg" 
                             placeholder="Contraseña" 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             disabled={isLoading}
+                            style={{ paddingRight: '80px' }}
                           />
                           <i className="fas fa-lock input-icon"></i>
+                          <button
+                            type="button"
+                            className="btn btn-link position-absolute"
+                            style={{
+                              right: '10px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              color: '#6c757d',
+                              padding: '0.25rem 0.5rem',
+                              zIndex: 10
+                            }}
+                            onClick={() => setShowPassword(!showPassword)}
+                            tabIndex={-1}
+                          >
+                            <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                          </button>
                         </div>
                       </div>
 

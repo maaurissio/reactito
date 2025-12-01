@@ -2,21 +2,24 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ISesionActiva } from '../types';
 import {
-  intentarIniciarSesion,
-  cerrarSesion as logoutService,
-  obtenerSesionActiva,
-  esAdministrador as checkAdmin,
+  iniciarSesion,
   registrarUsuario,
-} from '../services/usuarios.service';
+  cerrarSesion,
+  obtenerSesionActiva,
+  esAdministrador,
+} from '../services/auth.service';
 import { RolUsuario } from '../types';
+
+type LoginError = 'CUENTA_INEXISTENTE' | 'CREDENCIALES_INCORRECTAS' | 'CUENTA_INACTIVA';
 
 interface AuthState {
   user: ISesionActiva | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (emailOUsuario: string, password: string) => Promise<{ success: boolean; error?: 'CUENTA_INEXISTENTE' | 'CREDENCIALES_INCORRECTAS' | 'CUENTA_INACTIVA' }>;
-  register: (email: string, password: string, nombreCompleto: string) => Promise<boolean>;
-  logout: () => void;
+  isLoading: boolean;
+  login: (emailOUsuario: string, password: string) => Promise<{ success: boolean; error?: LoginError }>;
+  register: (email: string, password: string, nombreCompleto: string, usuario?: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   checkAuth: () => void;
 }
 
@@ -25,57 +28,79 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: obtenerSesionActiva(),
       isAuthenticated: obtenerSesionActiva() !== null,
-      isAdmin: checkAdmin(),
+      isAdmin: esAdministrador(),
+      isLoading: false,
 
       login: async (emailOUsuario: string, password: string) => {
-        const resultado = intentarIniciarSesion(emailOUsuario, password);
+        set({ isLoading: true });
         
-        if (resultado.success && resultado.sesion) {
-          set({
-            user: resultado.sesion,
-            isAuthenticated: true,
-            isAdmin: checkAdmin(),
-          });
-          return { success: true };
+        try {
+          const resultado = await iniciarSesion(emailOUsuario, password);
+          
+          if (resultado.success && resultado.sesion) {
+            set({
+              user: resultado.sesion,
+              isAuthenticated: true,
+              isAdmin: resultado.sesion.rol === RolUsuario.administrador,
+              isLoading: false,
+            });
+            return { success: true };
+          }
+          
+          set({ isLoading: false });
+          return { 
+            success: false, 
+            error: resultado.error 
+          };
+        } catch (error) {
+          set({ isLoading: false });
+          console.error('Error en login:', error);
+          return { success: false, error: 'CREDENCIALES_INCORRECTAS' as LoginError };
         }
-        
-        return { 
-          success: false, 
-          error: resultado.error 
-        };
       },
 
-      register: async (email: string, password: string, nombreCompleto: string) => {
+      register: async (email: string, password: string, nombreCompleto: string, usuario?: string) => {
+        set({ isLoading: true });
+        
         try {
           const [nombre, ...apellidoParts] = nombreCompleto.split(' ');
           const apellido = apellidoParts.join(' ') || '';
 
-          const nuevoUsuario = registrarUsuario({
+          const resultado = await registrarUsuario({
             email,
-            usuario: email.split('@')[0], // Usar parte del email como usuario
+            usuario: usuario || email.split('@')[0],
             password,
             nombre,
             apellido,
-            telefono: '',
-            direccion: '',
-            rol: RolUsuario.cliente,
-            isActivo: 'Activo' as any,
           });
 
-          return nuevoUsuario !== null;
+          set({ isLoading: false });
+          
+          if (resultado.success) {
+            return { success: true };
+          }
+          
+          return { success: false, error: resultado.error };
         } catch (error) {
+          set({ isLoading: false });
           console.error('Error al registrar usuario:', error);
-          return false;
+          return { success: false, error: 'Error al registrar usuario' };
         }
       },
 
-      logout: () => {
-        logoutService();
-        set({
-          user: null,
-          isAuthenticated: false,
-          isAdmin: false,
-        });
+      logout: async () => {
+        set({ isLoading: true });
+        
+        try {
+          await cerrarSesion();
+        } finally {
+          set({
+            user: null,
+            isAuthenticated: false,
+            isAdmin: false,
+            isLoading: false,
+          });
+        }
       },
 
       checkAuth: () => {
@@ -83,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: sesion,
           isAuthenticated: sesion !== null,
-          isAdmin: checkAdmin(),
+          isAdmin: esAdministrador(),
         });
       },
     }),

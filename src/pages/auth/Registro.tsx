@@ -4,10 +4,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 
 export const Registro = () => {
-  const [fullName, setFullName] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptPolicies, setAcceptPolicies] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -54,6 +57,19 @@ export const Registro = () => {
       return;
     }
 
+    // Validar nombre y apellido
+    if (!nombre.trim()) {
+      setError('El nombre es obligatorio.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!apellido.trim()) {
+      setError('El apellido es obligatorio.');
+      setIsLoading(false);
+      return;
+    }
+
     // Validar longitud de contraseña
     if (password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres.');
@@ -62,16 +78,17 @@ export const Registro = () => {
     }
 
     try {
-      const resultado = await register(email, password, fullName);
+      const nombreCompleto = `${nombre.trim()} ${apellido.trim()}`;
+      const resultado = await register(email, password, nombreCompleto);
       
-      if (resultado) {
+      if (resultado.success) {
         setSuccess(true);
         // Redirigir después de un momento
         setTimeout(() => {
           navigate('/login');
         }, 2000);
       } else {
-        setError('Error al crear la cuenta. El correo ya está registrado.');
+        setError(resultado.error || 'Error al crear la cuenta. El correo ya está registrado.');
         setIsLoading(false);
       }
     } catch (err) {
@@ -117,18 +134,34 @@ export const Registro = () => {
                     )}
 
                     <form onSubmit={handleSubmit}>
-                      <div className="mb-3">
-                        <div className="input-icon-container">
-                          <input 
-                            type="text" 
-                            className="form-control form-control-lg" 
-                            placeholder="Nombre Completo" 
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            required
-                            disabled={isLoading}
-                          />
-                          <i className="fas fa-user input-icon"></i>
+                      <div className="row mb-3">
+                        <div className="col-6">
+                          <div className="input-icon-container">
+                            <input 
+                              type="text" 
+                              className="form-control form-control-lg" 
+                              placeholder="Nombre" 
+                              value={nombre}
+                              onChange={(e) => setNombre(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                            <i className="fas fa-user input-icon"></i>
+                          </div>
+                        </div>
+                        <div className="col-6">
+                          <div className="input-icon-container">
+                            <input 
+                              type="text" 
+                              className="form-control form-control-lg" 
+                              placeholder="Apellido" 
+                              value={apellido}
+                              onChange={(e) => setApellido(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                            <i className="fas fa-user input-icon"></i>
+                          </div>
                         </div>
                       </div>
 
@@ -148,32 +181,66 @@ export const Registro = () => {
                       </div>
 
                       <div className="mb-3">
-                        <div className="input-icon-container">
+                        <div className="input-icon-container position-relative">
                           <input 
-                            type="password" 
+                            type={showPassword ? "text" : "password"} 
                             className="form-control form-control-lg" 
                             placeholder="Contraseña" 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             disabled={isLoading}
+                            style={{ paddingRight: '80px' }}
                           />
                           <i className="fas fa-lock input-icon"></i>
+                          <button
+                            type="button"
+                            className="btn btn-link position-absolute"
+                            style={{
+                              right: '10px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              color: '#6c757d',
+                              padding: '0.25rem 0.5rem',
+                              zIndex: 10
+                            }}
+                            onClick={() => setShowPassword(!showPassword)}
+                            tabIndex={-1}
+                          >
+                            <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                          </button>
                         </div>
                       </div>
 
                       <div className="mb-4">
-                        <div className="input-icon-container">
+                        <div className="input-icon-container position-relative">
                           <input 
-                            type="password" 
+                            type={showConfirmPassword ? "text" : "password"} 
                             className="form-control form-control-lg" 
                             placeholder="Confirmar Contraseña" 
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
                             disabled={isLoading}
+                            style={{ paddingRight: '80px' }}
                           />
                           <i className="fas fa-lock input-icon"></i>
+                          <button
+                            type="button"
+                            className="btn btn-link position-absolute"
+                            style={{
+                              right: '10px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              color: '#6c757d',
+                              padding: '0.25rem 0.5rem',
+                              zIndex: 10
+                            }}
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            tabIndex={-1}
+                          >
+                            <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                          </button>
                         </div>
                       </div>
 

@@ -1,7 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useProductsStore, useCartStore, useAuthStore } from '../../store';
-import type { IProducto, IResena } from '../../types';
+import type { IProducto } from '../../types';
+import { 
+  obtenerResenasProducto, 
+  obtenerResumenResenas, 
+  crearResena,
+  type IResenaAPI,
+  type IResumenResenas 
+} from '../../services/resenas.api.service';
 
 export const DetalleProducto = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,11 +21,15 @@ export const DetalleProducto = () => {
   const [cantidad, setCantidad] = useState(1);
   const [calificacion, setCalificacion] = useState(5);
   const [comentario, setComentario] = useState('');
-  const [resenas, setResenas] = useState<IResena[]>([]);
+  const [resenas, setResenas] = useState<IResenaAPI[]>([]);
+  const [resumen, setResumen] = useState<IResumenResenas | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [showResenaToast, setShowResenaToast] = useState(false);
   const [showStockError, setShowStockError] = useState(false);
   const [hoverStar, setHoverStar] = useState(0);
+  const [loadingResenas, setLoadingResenas] = useState(true);
+  const [errorResena, setErrorResena] = useState<string | null>(null);
+  const [enviandoResena, setEnviandoResena] = useState(false);
 
   const producto: IProducto | undefined = useMemo(() => {
     return productos.find((p) => p.id === Number(id));
@@ -34,20 +45,37 @@ export const DetalleProducto = () => {
     []
   );
 
+  // Cargar reseñas desde la API
+  const cargarResenas = useCallback(async () => {
+    if (!producto) return;
+    
+    setLoadingResenas(true);
+    try {
+      const [resenasData, resumenData] = await Promise.all([
+        obtenerResenasProducto(producto.id),
+        obtenerResumenResenas(producto.id)
+      ]);
+      setResenas(resenasData.content);
+      setResumen(resumenData);
+    } catch (error) {
+      console.error('Error al cargar reseñas:', error);
+      // Si falla, mantener arrays vacíos
+      setResenas([]);
+      setResumen(null);
+    } finally {
+      setLoadingResenas(false);
+    }
+  }, [producto]);
+
   useEffect(() => {
     if (!producto) {
       navigate('/catalogo');
       return;
     }
     
-    // Cargar reseñas desde localStorage
-    const resenasGuardadas = localStorage.getItem(`resenas_producto_${producto.id}`);
-    if (resenasGuardadas) {
-      setResenas(JSON.parse(resenasGuardadas));
-    } else {
-      setResenas([]);
-    }
-  }, [producto, navigate]);
+    // Cargar reseñas desde la API
+    cargarResenas();
+  }, [producto, navigate, cargarResenas]);
 
   if (!producto) {
     return null;
@@ -66,7 +94,7 @@ export const DetalleProducto = () => {
     }
   };
 
-  const handleSubmitResena = (e: React.FormEvent) => {
+  const handleSubmitResena = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
@@ -77,25 +105,45 @@ export const DetalleProducto = () => {
 
     if (!producto) return;
 
-    const nuevaResena: IResena = {
-      id: `${Date.now()}-${Math.random()}`,
-      productoId: producto.id,
-      usuarioId: user.id,
-      usuarioNombre: `${user.nombre} ${user.apellido}`,
-      usuarioAvatar: user.avatar,
-      calificacion,
-      comentario,
-      fecha: new Date().toISOString(),
-    };
+    // Validar comentario
+    if (comentario.trim().length < 10) {
+      setErrorResena('El comentario debe tener al menos 10 caracteres.');
+      return;
+    }
 
-    const nuevasResenas = [nuevaResena, ...resenas];
-    setResenas(nuevasResenas);
-    localStorage.setItem(`resenas_producto_${producto.id}`, JSON.stringify(nuevasResenas));
-    
-    setComentario('');
-    setCalificacion(5);
-    setShowResenaToast(true);
-    setTimeout(() => setShowResenaToast(false), 4000);
+    setEnviandoResena(true);
+    setErrorResena(null);
+
+    try {
+      await crearResena(producto.id, {
+        puntuacion: calificacion,
+        comentario: comentario.trim()
+      });
+
+      // Recargar reseñas desde la API
+      await cargarResenas();
+      
+      setComentario('');
+      setCalificacion(5);
+      setShowResenaToast(true);
+      setTimeout(() => setShowResenaToast(false), 4000);
+    } catch (error: unknown) {
+      console.error('Error al crear reseña:', error);
+      
+      // Manejar errores específicos
+      const err = error as { status?: number; error?: string; mensaje?: string };
+      if (err.status === 403) {
+        setErrorResena('Solo puedes reseñar productos que hayas comprado y recibido. Verifica que tu pedido esté en estado "Entregado".');
+      } else if (err.status === 409) {
+        setErrorResena('Ya has dejado una reseña para este producto.');
+      } else if (err.status === 401) {
+        setErrorResena('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+      } else {
+        setErrorResena(err.error || err.mensaje || 'Error al publicar la reseña. Intenta nuevamente.');
+      }
+    } finally {
+      setEnviandoResena(false);
+    }
   };
 
   const getAvatarColor = (nombre: string) => {
@@ -132,9 +180,14 @@ export const DetalleProducto = () => {
   };
 
   const promedioCalificacion = useMemo(() => {
+    if (resumen) {
+      return resumen.promedioCalificacion;
+    }
     if (resenas.length === 0) return 0;
-    return resenas.reduce((acc, r) => acc + r.calificacion, 0) / resenas.length;
-  }, [resenas]);
+    return resenas.reduce((acc, r) => acc + r.puntuacion, 0) / resenas.length;
+  }, [resumen, resenas]);
+
+  const totalResenas = resumen?.totalResenas ?? resenas.length;
 
   const renderStars = (rating: number, interactive = false, onHover?: (value: number) => void, onClick?: (value: number) => void) => {
     const stars = [];
@@ -268,7 +321,7 @@ export const DetalleProducto = () => {
               <div className="mb-3">
                 <span className="me-2">{renderStars(promedioCalificacion)}</span>
                 <span style={{ color: '#6e6e73', fontSize: '0.95rem' }}>
-                  {promedioCalificacion.toFixed(1)} ({resenas.length} {resenas.length === 1 ? 'reseña' : 'reseñas'})
+                  {promedioCalificacion.toFixed(1)} ({totalResenas} {totalResenas === 1 ? 'reseña' : 'reseñas'})
                 </span>
               </div>
               
@@ -424,6 +477,12 @@ export const DetalleProducto = () => {
                 </h5>
                 {user ? (
                   <form onSubmit={handleSubmitResena}>
+                    {errorResena && (
+                      <div className="alert alert-danger mb-3" style={{ borderRadius: '12px' }}>
+                        <i className="fas fa-exclamation-circle me-2"></i>
+                        {errorResena}
+                      </div>
+                    )}
                     <div className="mb-3">
                       <label className="form-label" style={{ fontWeight: '600', color: '#1d1d1f' }}>
                         Calificación
@@ -439,7 +498,7 @@ export const DetalleProducto = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label" style={{ fontWeight: '600', color: '#1d1d1f' }}>
-                        Comentario
+                        Comentario <small className="text-muted">(mínimo 10 caracteres)</small>
                       </label>
                       <textarea
                         className="form-control"
@@ -456,6 +515,9 @@ export const DetalleProducto = () => {
                         onChange={(e) => setComentario(e.target.value)}
                         placeholder="Cuéntanos tu experiencia con este producto..."
                         required
+                        minLength={10}
+                        maxLength={500}
+                        disabled={enviandoResena}
                         onFocus={(e) => {
                           e.currentTarget.style.borderColor = '#2E8B57';
                           e.currentTarget.style.boxShadow = '0 0 0 4px rgba(46, 139, 87, 0.1)';
@@ -465,10 +527,12 @@ export const DetalleProducto = () => {
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       />
+                      <small className="text-muted">{comentario.length}/500 caracteres</small>
                     </div>
                     <button 
                       type="submit" 
                       className="btn"
+                      disabled={enviandoResena || comentario.trim().length < 10}
                       style={{
                         background: '#2E8B57',
                         color: '#fff',
@@ -477,19 +541,31 @@ export const DetalleProducto = () => {
                         fontWeight: '600',
                         border: 'none',
                         boxShadow: '0 2px 8px rgba(46, 139, 87, 0.2)',
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.3s ease',
+                        opacity: enviandoResena || comentario.trim().length < 10 ? 0.7 : 1
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(46, 139, 87, 0.3)';
+                        if (!enviandoResena && comentario.trim().length >= 10) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(46, 139, 87, 0.3)';
+                        }
                       }}
                       onMouseOut={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(46, 139, 87, 0.2)';
                       }}
                     >
-                      <i className="fas fa-paper-plane me-2"></i>
-                      Publicar Reseña
+                      {enviandoResena ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin me-2"></i>
+                          Publicando...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-paper-plane me-2"></i>
+                          Publicar Reseña
+                        </>
+                      )}
                     </button>
                   </form>
                 ) : (
@@ -519,7 +595,14 @@ export const DetalleProducto = () => {
             </div>
 
             {/* Lista de reseñas */}
-            {resenas.length === 0 ? (
+            {loadingResenas ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-success" role="status">
+                  <span className="visually-hidden">Cargando reseñas...</span>
+                </div>
+                <p className="mt-3 text-muted">Cargando reseñas...</p>
+              </div>
+            ) : resenas.length === 0 ? (
               <div className="text-center py-5">
                 <i className="fas fa-comments" style={{ fontSize: '4rem', color: '#d2d2d7', marginBottom: '1rem' }}></i>
                 <p style={{ color: '#6e6e73', fontSize: '1.1rem' }}>
@@ -552,40 +635,47 @@ export const DetalleProducto = () => {
                     <div className="card-body" style={{ padding: '1.5rem' }}>
                       <div className="d-flex align-items-start mb-2">
                         <div className="me-3">
-                          {resena.usuarioAvatar ? (
-                            <img 
-                              src={resena.usuarioAvatar} 
-                              alt={resena.usuarioNombre}
-                              className="rounded-circle"
-                              style={{ width: '50px', height: '50px', objectFit: 'cover', border: '2px solid rgba(46, 139, 87, 0.2)' }}
-                            />
-                          ) : (
-                            <div 
-                              className="rounded-circle d-flex align-items-center justify-content-center"
-                              style={{ 
-                                width: '50px', 
-                                height: '50px',
-                                background: getAvatarColor(resena.usuarioNombre),
-                                color: '#fff',
-                                fontWeight: '700',
-                                fontSize: '1.2rem',
-                                boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                              }}
-                            >
-                              <span>{resena.usuarioNombre.charAt(0).toUpperCase()}</span>
-                            </div>
-                          )}
+                          <div 
+                            className="rounded-circle d-flex align-items-center justify-content-center"
+                            style={{ 
+                              width: '50px', 
+                              height: '50px',
+                              background: getAvatarColor(resena.nombreUsuario),
+                              color: '#fff',
+                              fontWeight: '700',
+                              fontSize: '1.2rem',
+                              boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                            }}
+                          >
+                            <span>{resena.nombreUsuario.charAt(0).toUpperCase()}</span>
+                          </div>
                         </div>
                         <div className="flex-grow-1">
                           <div className="d-flex justify-content-between align-items-start">
                             <div>
                               <h6 className="mb-0" style={{ fontWeight: '700', color: '#1d1d1f' }}>
-                                {resena.usuarioNombre}
+                                {resena.nombreUsuario}
+                                {resena.verificado && (
+                                  <span 
+                                    className="badge ms-2" 
+                                    style={{ 
+                                      background: 'rgba(34, 197, 94, 0.15)', 
+                                      color: '#16a34a',
+                                      fontSize: '0.7rem',
+                                      fontWeight: '600',
+                                      padding: '0.25rem 0.5rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    <i className="fas fa-check-circle me-1"></i>
+                                    Compra verificada
+                                  </span>
+                                )}
                               </h6>
-                              <small style={{ color: '#6e6e73' }}>{formatFecha(resena.fecha)}</small>
+                              <small style={{ color: '#6e6e73' }}>{formatFecha(resena.fechaCreacion)}</small>
                             </div>
                             <div>
-                              {renderStars(resena.calificacion)}
+                              {renderStars(resena.puntuacion)}
                             </div>
                           </div>
                           <p className="mt-2 mb-0" style={{ color: '#1d1d1f', lineHeight: '1.6' }}>

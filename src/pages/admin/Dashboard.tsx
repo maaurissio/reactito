@@ -2,21 +2,22 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useProductsStore } from '../../store/productsStore';
 import { Navigate } from 'react-router-dom';
-import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService, registrarUsuario } from '../../services/usuarios.service';
-import { obtenerTodosLosPedidos, actualizarEstadoPedido, type IPedido } from '../../services/pedidos.service';
-import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/shippingConfig.service';
-import { agregarProducto } from '../../services/productos.service';
+import { obtenerTodosLosUsuarios, actualizarUsuario as actualizarUsuarioService } from '../../services/usuarios.api.service';
+import { registrarUsuario } from '../../services/auth.service';
+import { obtenerTodosLosPedidos, actualizarEstadoPedido, type IPedido } from '../../services/pedidos.api.service';
+import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/envio.api.service';
+import { obtenerCategorias, agregarCategoria as agregarCategoriaService, eliminarCategoria as eliminarCategoriaService, type ICategoria } from '../../services/categorias.api.service';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { SelectModerno } from '../../components/ui';
 import type { IProducto, IUsuario } from '../../types';
-import { Estado, RolUsuario } from '../../types/models';
+import { Estado } from '../../types/models';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export const Dashboard = () => {
   const { isAdmin, user, logout } = useAuthStore();
-  const { productos, cargarProductos, actualizarProducto, actualizarStock } = useProductsStore();
+  const { productos, cargarProductos, actualizarProducto, actualizarStock, agregarProducto } = useProductsStore();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -95,7 +96,7 @@ export const Dashboard = () => {
   const [imagenPreview, setImagenPreview] = useState('');
 
   // Estados para categorías personalizadas
-  const [categorias, setCategorias] = useState<Array<{value: string, label: string, codigo: string}>>([
+  const [categorias, setCategorias] = useState<ICategoria[]>([
     { value: 'Frutas Frescas', label: 'Frutas Frescas', codigo: 'FR' },
     { value: 'Verduras Orgánicas', label: 'Verduras Orgánicas', codigo: 'VR' },
     { value: 'Productos Orgánicos', label: 'Productos Orgánicos', codigo: 'PO' },
@@ -117,33 +118,30 @@ export const Dashboard = () => {
   const stockTotal = productos.reduce((sum, p) => sum + p.stock, 0);
 
   useEffect(() => {
-    // Cargar productos
-    cargarProductos();
+    const cargarDatos = async () => {
+      // Cargar productos
+      await cargarProductos();
 
-    // Cargar usuarios
-    const users = obtenerTodosLosUsuarios();
-    setUsuarios(users);
+      // Cargar usuarios
+      const users = await obtenerTodosLosUsuarios();
+      setUsuarios(users);
 
-    // Cargar pedidos
-    const orders = obtenerTodosLosPedidos();
-    setPedidos(orders);
+      // Cargar pedidos
+      const orders = await obtenerTodosLosPedidos();
+      setPedidos(orders);
 
-    // Cargar configuración de envío
-    const config = obtenerConfiguracionEnvio();
-    setCostoEnvioBase(config.costoEnvioBase);
-    setEnvioGratisDesde(config.envioGratisDesde);
-    setEnvioGratisHabilitado(config.envioGratisHabilitado);
+      // Cargar configuración de envío
+      const config = await obtenerConfiguracionEnvio();
+      setCostoEnvioBase(config.costoEnvioBase);
+      setEnvioGratisDesde(config.envioGratisDesde);
+      setEnvioGratisHabilitado(config.envioGratisHabilitado);
 
-    // Cargar categorías personalizadas desde localStorage
-    const categoriasGuardadas = localStorage.getItem('categorias_productos_custom');
-    if (categoriasGuardadas) {
-      try {
-        const categoriasParseadas = JSON.parse(categoriasGuardadas);
-        setCategorias(categoriasParseadas);
-      } catch (error) {
-        console.error('Error al cargar categorías:', error);
-      }
-    }
+      // Cargar categorías desde API
+      const categoriasAPI = await obtenerCategorias();
+      setCategorias(categoriasAPI);
+    };
+
+    cargarDatos();
   }, [cargarProductos]);
 
   // Bloquear scroll del body cuando se abren modales
@@ -530,7 +528,7 @@ export const Dashboard = () => {
     setShowAddModal(true);
   };
 
-  const guardarNuevoProducto = () => {
+  const guardarNuevoProducto = async () => {
     // Validaciones
     if (!formAdd.nombre.trim()) {
       mostrarToast('El nombre del producto es obligatorio', 'error');
@@ -554,17 +552,7 @@ export const Dashboard = () => {
     }
 
     try {
-      console.log('Datos del producto a agregar:', {
-        nombre: formAdd.nombre,
-        descripcion: formAdd.descripcion,
-        precio: formAdd.precio,
-        stock: formAdd.stock,
-        categoria: formAdd.categoria,
-        imagen: formAdd.imagen,
-        isActivo: Estado.activo
-      });
-      
-      const nuevoProducto = agregarProducto({
+      const resultado = await agregarProducto({
         nombre: formAdd.nombre,
         descripcion: formAdd.descripcion,
         precio: formAdd.precio,
@@ -574,28 +562,27 @@ export const Dashboard = () => {
         isActivo: Estado.activo
       });
       
-      console.log('Producto agregado:', nuevoProducto);
-      console.log('Imagen del producto agregado:', nuevoProducto.imagen);
-      
-      // Forzar recarga completa de productos
-      setTimeout(() => {
-        cargarProductos();
-      }, 100);
-      
-      setShowAddModal(false);
-      
-      // Resetear formulario
-      setFormAdd({
-        nombre: '',
-        descripcion: '',
-        precio: 0,
-        stock: 0,
-        categoria: 'Frutas Frescas',
-        imagen: ''
-      });
-      setImagenPreview('');
-      
-      mostrarToast('Producto agregado exitosamente', 'success');
+      if (resultado.success) {
+        // Forzar recarga completa de productos
+        await cargarProductos();
+        
+        setShowAddModal(false);
+        
+        // Resetear formulario
+        setFormAdd({
+          nombre: '',
+          descripcion: '',
+          precio: 0,
+          stock: 0,
+          categoria: 'Frutas Frescas',
+          imagen: ''
+        });
+        setImagenPreview('');
+        
+        mostrarToast('Producto agregado exitosamente', 'success');
+      } else {
+        mostrarToast(resultado.error || 'Error al agregar el producto', 'error');
+      }
     } catch (error) {
       console.error('Error al agregar producto:', error);
       mostrarToast('Error al agregar el producto', 'error');
@@ -608,7 +595,7 @@ export const Dashboard = () => {
   };
 
   // Funciones para manejar categorías personalizadas
-  const agregarCategoria = () => {
+  const agregarCategoria = async () => {
     // Validaciones
     if (!nuevaCategoria.nombre.trim()) {
       mostrarToast('El nombre de la categoría es obligatorio', 'error');
@@ -640,26 +627,27 @@ export const Dashboard = () => {
       return;
     }
 
-    // Crear nueva categoría
-    const nuevaCat = {
-      value: nuevaCategoria.nombre.trim(),
-      label: nuevaCategoria.nombre.trim(),
-      codigo: nuevaCategoria.codigo.trim().toUpperCase()
-    };
+    // Crear nueva categoría usando la API
+    const resultado = await agregarCategoriaService(
+      nuevaCategoria.nombre.trim(),
+      nuevaCategoria.codigo.trim().toUpperCase()
+    );
 
-    const categoriasActualizadas = [...categorias, nuevaCat];
-    setCategorias(categoriasActualizadas);
+    if (resultado.success && resultado.categoria) {
+      // Recargar categorías desde la API
+      const categoriasActualizadas = await obtenerCategorias();
+      setCategorias(categoriasActualizadas);
 
-    // Guardar en localStorage
-    localStorage.setItem('categorias_productos_custom', JSON.stringify(categoriasActualizadas));
-
-    // Limpiar formulario y cerrar modal
-    setNuevaCategoria({ nombre: '', codigo: '' });
-    setShowCategoryModal(false);
-    mostrarToast('Categoría agregada exitosamente', 'success');
+      // Limpiar formulario y cerrar modal
+      setNuevaCategoria({ nombre: '', codigo: '' });
+      setShowCategoryModal(false);
+      mostrarToast('Categoría agregada exitosamente', 'success');
+    } else {
+      mostrarToast(resultado.error || 'Error al agregar categoría', 'error');
+    }
   };
 
-  const eliminarCategoria = (categoriaValue: string) => {
+  const eliminarCategoria = async (categoriaValue: string) => {
     // No permitir eliminar si hay productos con esa categoría
     const productosConCategoria = productos.filter(p => p.categoria === categoriaValue);
     
@@ -668,10 +656,15 @@ export const Dashboard = () => {
       return;
     }
 
-    const categoriasActualizadas = categorias.filter(cat => cat.value !== categoriaValue);
-    setCategorias(categoriasActualizadas);
-    localStorage.setItem('categorias_productos_custom', JSON.stringify(categoriasActualizadas));
-    mostrarToast('Categoría eliminada', 'success');
+    const resultado = await eliminarCategoriaService(categoriaValue);
+    
+    if (resultado.success) {
+      const categoriasActualizadas = await obtenerCategorias();
+      setCategorias(categoriasActualizadas);
+      mostrarToast('Categoría eliminada', 'success');
+    } else {
+      mostrarToast(resultado.error || 'Error al eliminar categoría', 'error');
+    }
   };
 
   const handleArchivoImagen = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -724,9 +717,9 @@ export const Dashboard = () => {
     setShowUserEditModal(true);
   };
 
-  const guardarEdicionUsuario = () => {
+  const guardarEdicionUsuario = async () => {
     if (usuarioSeleccionado) {
-      actualizarUsuarioService(usuarioSeleccionado.id, {
+      await actualizarUsuarioService(usuarioSeleccionado.id, {
         nombre: formEditUser.nombre,
         apellido: formEditUser.apellido,
         email: formEditUser.email,
@@ -737,7 +730,8 @@ export const Dashboard = () => {
       setShowUserEditModal(false);
       setUsuarioSeleccionado(null);
       // Recargar lista de usuarios
-      setUsuarios(obtenerTodosLosUsuarios());
+      const users = await obtenerTodosLosUsuarios();
+      setUsuarios(users);
     }
   };
 
@@ -751,20 +745,22 @@ export const Dashboard = () => {
     setShowUserDeleteModal(true);
   };
 
-  const confirmarEliminarUsuario = () => {
+  const confirmarEliminarUsuario = async () => {
     if (usuarioSeleccionado) {
-      actualizarUsuarioService(usuarioSeleccionado.id, { isActivo: Estado.inactivo });
+      await actualizarUsuarioService(usuarioSeleccionado.id, { isActivo: Estado.inactivo });
       setShowUserDeleteModal(false);
       setUsuarioSeleccionado(null);
       // Recargar lista de usuarios
-      setUsuarios(obtenerTodosLosUsuarios());
+      const users = await obtenerTodosLosUsuarios();
+      setUsuarios(users);
     }
   };
 
-  const activarUsuario = (usuario: IUsuario) => {
-    actualizarUsuarioService(usuario.id, { isActivo: Estado.activo });
+  const activarUsuario = async (usuario: IUsuario) => {
+    await actualizarUsuarioService(usuario.id, { isActivo: Estado.activo });
     // Recargar lista de usuarios
-    setUsuarios(obtenerTodosLosUsuarios());
+    const users = await obtenerTodosLosUsuarios();
+    setUsuarios(users);
   };
 
   // Funciones para agregar usuario
@@ -782,7 +778,7 @@ export const Dashboard = () => {
     setShowUserAddModal(true);
   };
 
-  const guardarNuevoUsuario = () => {
+  const guardarNuevoUsuario = async () => {
     // Validaciones
     if (!formAddUser.nombre.trim()) {
       mostrarToast('El nombre es obligatorio', 'error');
@@ -806,7 +802,7 @@ export const Dashboard = () => {
     }
 
     try {
-      const nuevoUsuario = registrarUsuario({
+      const resultado = await registrarUsuario({
         nombre: formAddUser.nombre,
         apellido: formAddUser.apellido,
         usuario: formAddUser.usuario,
@@ -814,13 +810,12 @@ export const Dashboard = () => {
         password: formAddUser.password,
         telefono: formAddUser.telefono,
         direccion: formAddUser.direccion,
-        rol: formAddUser.rol === 'administrador' ? RolUsuario.administrador : RolUsuario.cliente,
-        isActivo: Estado.activo,
       });
 
-      if (nuevoUsuario) {
+      if (resultado.success && resultado.usuario) {
         // Recargar lista de usuarios
-        setUsuarios(obtenerTodosLosUsuarios());
+        const users = await obtenerTodosLosUsuarios();
+        setUsuarios(users);
         setShowUserAddModal(false);
         
         // Resetear formulario
@@ -835,9 +830,9 @@ export const Dashboard = () => {
           rol: 'cliente'
         });
         
-        mostrarToast(`Usuario ${nuevoUsuario.nombre} creado exitosamente. Ya puede iniciar sesión.`, 'success');
+        mostrarToast(`Usuario ${resultado.usuario.nombre} creado exitosamente. Ya puede iniciar sesión.`, 'success');
       } else {
-        mostrarToast('El email o nombre de usuario ya están en uso', 'error');
+        mostrarToast(resultado.error || 'El email o nombre de usuario ya están en uso', 'error');
       }
     } catch (error) {
       console.error('Error al crear usuario:', error);
@@ -867,11 +862,11 @@ export const Dashboard = () => {
     setShowPedidoEditModal(true);
   };
 
-  const guardarEstadoPedido = () => {
+  const guardarEstadoPedido = async () => {
     if (pedidoSeleccionado) {
-      const resultado = actualizarEstadoPedido(pedidoSeleccionado.id, nuevoEstadoPedido);
+      const resultado = await actualizarEstadoPedido(pedidoSeleccionado.id, nuevoEstadoPedido);
       if (resultado.success) {
-        const pedidosActualizados = obtenerTodosLosPedidos();
+        const pedidosActualizados = await obtenerTodosLosPedidos();
         setPedidos(pedidosActualizados);
         
         setShowPedidoEditModal(false);
