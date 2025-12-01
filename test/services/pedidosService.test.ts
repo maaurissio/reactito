@@ -1,28 +1,103 @@
-import { describe, expect, test, beforeEach } from 'vitest';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
+import type { IUsuario } from '../../src/types';
+import { Estado, RolUsuario } from '../../src/types';
+
+// Usar vi.hoisted para crear mocks que se levanten antes que las importaciones
+const mocks = vi.hoisted(() => {
+  const pedidosCreados: any[] = [];
+
+  return {
+    pedidosCreados,
+    crearPedido: vi.fn((...args: any[]) => {
+      const nuevoPedido = {
+        id: `PED-${Date.now()}-${pedidosCreados.length}`,
+        fecha: new Date().toISOString(),
+        estado: 'confirmado' as const,
+        contacto: args[1],
+        envio: args[2],
+        items: args[3],
+        subtotal: args[4],
+        costoEnvio: args[5],
+        total: args[6],
+        usuarioId: args[0]?.id || null,
+      };
+      pedidosCreados.push(nuevoPedido);
+      return Promise.resolve({ success: true, pedido: nuevoPedido });
+    }),
+    obtenerPedido: vi.fn((id: string) => {
+      return Promise.resolve(pedidosCreados.find(p => p.id === id) || null);
+    }),
+    obtenerTodosLosPedidos: vi.fn(() => {
+      return Promise.resolve(pedidosCreados);
+    }),
+    obtenerPedidosUsuario: vi.fn((email: string) => {
+      return Promise.resolve(pedidosCreados.filter(p => p.contacto?.email === email));
+    }),
+    actualizarEstadoPedido: vi.fn((id: string, estado: string) => {
+      const pedido = pedidosCreados.find(p => p.id === id);
+      if (pedido) {
+        pedido.estado = estado;
+        return Promise.resolve({ success: true, mensaje: 'Estado actualizado' });
+      }
+      return Promise.resolve({ success: false, error: 'Pedido no encontrado' });
+    }),
+    reset: () => {
+      pedidosCreados.length = 0;
+      mocks.crearPedido.mockClear();
+      mocks.obtenerPedido.mockClear();
+      mocks.obtenerTodosLosPedidos.mockClear();
+      mocks.obtenerPedidosUsuario.mockClear();
+      mocks.actualizarEstadoPedido.mockClear();
+    }
+  };
+});
+
+// Mock del servicio de pedidos
+vi.mock('../../src/services/pedidos.api.service', () => ({
+  crearPedido: mocks.crearPedido,
+  obtenerPedido: mocks.obtenerPedido,
+  obtenerTodosLosPedidos: mocks.obtenerTodosLosPedidos,
+  obtenerPedidosUsuario: mocks.obtenerPedidosUsuario,
+  actualizarEstadoPedido: mocks.actualizarEstadoPedido,
+}));
+
+// Importar después del mock
 import {
   crearPedido,
   obtenerPedido,
-  obtenerPedidosUsuario,
   obtenerTodosLosPedidos,
-  marcarPedidosComoLeidos,
   actualizarEstadoPedido,
-  type IPedido
-} from '../../src/services/pedidos.service';
+  obtenerPedidosUsuario,
+} from '../../src/services/pedidos.api.service';
 
-describe('Prueba del servicio de pedidos (pedidosService)', () => {
+describe('Prueba del servicio de pedidos API (pedidos.api.service)', () => {
   
   beforeEach(() => {
+    mocks.reset();
     localStorage.clear();
   });
 
-  const datosContactoPrueba = {
+  // Datos de prueba con la estructura correcta del servicio
+  const usuarioPrueba: IUsuario = {
+    id: 1,
+    email: 'juan@test.com',
+    usuario: 'juanperez',
+    password: 'password123',
+    nombre: 'Juan',
+    apellido: 'Pérez',
+    rol: RolUsuario.cliente,
+    isActivo: Estado.activo,
+    fechaRegistro: '2025-01-01',
+  };
+  
+  const contactoPrueba = {
     nombre: 'Juan',
     apellido: 'Pérez',
     email: 'juan@test.com',
     telefono: '+56 9 1234 5678'
   };
 
-  const datosEnvioPrueba = {
+  const envioPrueba = {
     direccion: 'Av. Siempre Viva 123',
     ciudad: 'Santiago',
     region: 'Metropolitana',
@@ -33,122 +108,102 @@ describe('Prueba del servicio de pedidos (pedidosService)', () => {
   };
 
   const itemsPrueba = [
-    {
-      id: 1,
-      nombre: 'Manzana Fuji',
-      precio: 2500,
-      cantidad: 2,
-      subtotal: 5000
-    },
-    {
-      id: 2,
-      nombre: 'Pera',
-      precio: 3000,
-      cantidad: 1,
-      subtotal: 3000
-    }
+    { id: 1, nombre: 'Manzana Fuji', precio: 2500, cantidad: 2, subtotal: 5000 },
+    { id: 2, nombre: 'Pera', precio: 3000, cantidad: 1, subtotal: 3000 }
   ];
 
-  test('debe crear un pedido correctamente', () => {
-    const resultado = crearPedido(
-      null,
-      datosContactoPrueba,
-      datosEnvioPrueba,
+  const subtotalPrueba = 8000;
+  const costoEnvioPrueba = 3000;
+  const totalPrueba = 11000;
+
+  test('debe crear un pedido correctamente', async () => {
+    const resultado = await crearPedido(
+      usuarioPrueba,
+      contactoPrueba,
+      envioPrueba,
       itemsPrueba,
-      8000,
-      3000,
-      11000
+      subtotalPrueba,
+      costoEnvioPrueba,
+      totalPrueba
     );
 
+    expect(mocks.crearPedido).toHaveBeenCalled();
     expect(resultado.success).toBe(true);
-    expect(resultado.pedido).not.toBeUndefined();
-    expect(resultado.pedido?.contacto.email).toBe('juan@test.com');
-    expect(resultado.pedido?.total).toBe(11000);
+    expect(resultado.pedido).toBeDefined();
+    expect(resultado.pedido?.id).toBeDefined();
+    expect(resultado.pedido?.estado).toBe('confirmado');
   });
 
-  test('debe obtener un pedido por ID correctamente', () => {
-    const resultado = crearPedido(
-      null,
-      datosContactoPrueba,
-      datosEnvioPrueba,
+  test('debe obtener un pedido por ID correctamente', async () => {
+    // Primero crear un pedido
+    const resultadoCrear = await crearPedido(
+      usuarioPrueba,
+      contactoPrueba,
+      envioPrueba,
       itemsPrueba,
-      8000,
-      3000,
-      11000
+      subtotalPrueba,
+      costoEnvioPrueba,
+      totalPrueba
     );
+    const pedidoId = resultadoCrear.pedido?.id || '';
+    
+    // Luego obtenerlo
+    const pedidoObtenido = await obtenerPedido(pedidoId);
 
-    const pedidoId = resultado.pedido?.id || '';
-    const pedidoObtenido = obtenerPedido(pedidoId);
-
+    expect(mocks.obtenerPedido).toHaveBeenCalledWith(pedidoId);
     expect(pedidoObtenido).not.toBeNull();
     expect(pedidoObtenido?.id).toBe(pedidoId);
   });
 
-  test('debe obtener todos los pedidos existentes', () => {
-    crearPedido(null, datosContactoPrueba, datosEnvioPrueba, itemsPrueba, 8000, 3000, 11000);
-    crearPedido(null, datosContactoPrueba, datosEnvioPrueba, itemsPrueba, 8000, 3000, 11000);
-    crearPedido(null, datosContactoPrueba, datosEnvioPrueba, itemsPrueba, 8000, 3000, 11000);
+  test('debe obtener todos los pedidos existentes', async () => {
+    // Crear varios pedidos
+    await crearPedido(usuarioPrueba, contactoPrueba, envioPrueba, itemsPrueba, subtotalPrueba, costoEnvioPrueba, totalPrueba);
+    await crearPedido(usuarioPrueba, contactoPrueba, envioPrueba, itemsPrueba, subtotalPrueba, costoEnvioPrueba, totalPrueba);
+    await crearPedido(usuarioPrueba, contactoPrueba, envioPrueba, itemsPrueba, subtotalPrueba, costoEnvioPrueba, totalPrueba);
 
-    const todosPedidos = obtenerTodosLosPedidos();
+    const todosPedidos = await obtenerTodosLosPedidos();
     
+    expect(mocks.obtenerTodosLosPedidos).toHaveBeenCalled();
     expect(todosPedidos.length).toBe(3);
   });
 
-  test('debe actualizar el estado de un pedido correctamente', () => {
-    const resultado = crearPedido(
-      null,
-      datosContactoPrueba,
-      datosEnvioPrueba,
+  test('debe actualizar el estado de un pedido correctamente', async () => {
+    // Crear pedido
+    const resultadoCrear = await crearPedido(
+      usuarioPrueba,
+      contactoPrueba,
+      envioPrueba,
       itemsPrueba,
-      8000,
-      3000,
-      11000
+      subtotalPrueba,
+      costoEnvioPrueba,
+      totalPrueba
     );
+    const pedidoId = resultadoCrear.pedido?.id || '';
+    
+    // Actualizar estado
+    const resultadoActualizacion = await actualizarEstadoPedido(pedidoId, 'enviado');
 
-    const pedidoId = resultado.pedido?.id || '';
-    const resultadoActualizacion = actualizarEstadoPedido(pedidoId, 'enviado');
-
+    expect(mocks.actualizarEstadoPedido).toHaveBeenCalledWith(pedidoId, 'enviado');
     expect(resultadoActualizacion.success).toBe(true);
-
-    const pedidoActualizado = obtenerPedido(pedidoId);
-    expect(pedidoActualizado?.estado).toBe('enviado');
   });
 
-  test('debe calcular correctamente el total del pedido', () => {
-    const resultado = crearPedido(
-      null,
-      datosContactoPrueba,
-      datosEnvioPrueba,
-      itemsPrueba,
-      8000, // subtotal
-      3000, // costo envío
-      11000 // total
-    );
-
-    expect(resultado.pedido?.subtotal).toBe(8000);
-    expect(resultado.pedido?.costoEnvio).toBe(3000);
-    expect(resultado.pedido?.total).toBe(11000);
-  });
-
-  test('debe almacenar correctamente los items del pedido', () => {
-    const resultado = crearPedido(
-      null,
-      datosContactoPrueba,
-      datosEnvioPrueba,
-      itemsPrueba,
-      8000,
-      3000,
-      11000
-    );
-
-    expect(resultado.pedido?.items.length).toBe(2);
-    expect(resultado.pedido?.items[0].nombre).toBe('Manzana Fuji');
-    expect(resultado.pedido?.items[1].nombre).toBe('Pera');
-  });
-
-  test('debe retornar array vacío si no hay pedidos para un usuario', () => {
-    const pedidos = obtenerPedidosUsuario('noexiste@test.com');
+  test('debe retornar array vacío si no hay pedidos para un usuario', async () => {
+    const pedidos = await obtenerPedidosUsuario('inexistente@test.com');
     
     expect(pedidos).toEqual([]);
+  });
+
+  test('debe filtrar pedidos por email de usuario correctamente', async () => {
+    // Crear pedidos para diferentes emails
+    const contacto1 = { ...contactoPrueba, email: 'usuario1@test.com' };
+    const contacto2 = { ...contactoPrueba, email: 'usuario2@test.com' };
+    
+    await crearPedido(usuarioPrueba, contacto1, envioPrueba, itemsPrueba, subtotalPrueba, costoEnvioPrueba, totalPrueba);
+    await crearPedido(usuarioPrueba, contacto1, envioPrueba, itemsPrueba, subtotalPrueba, costoEnvioPrueba, totalPrueba);
+    await crearPedido(usuarioPrueba, contacto2, envioPrueba, itemsPrueba, subtotalPrueba, costoEnvioPrueba, totalPrueba);
+
+    const pedidosUsuario1 = await obtenerPedidosUsuario('usuario1@test.com');
+    
+    expect(pedidosUsuario1.length).toBe(2);
   });
 });

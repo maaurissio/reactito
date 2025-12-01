@@ -1,6 +1,7 @@
 import { describe, expect, test, beforeEach } from 'vitest';
 import { useCartStore } from '../../src/store/cartStore';
 import type { IProducto } from '../../src/types';
+import { Estado } from '../../src/types';
 
 describe('Prueba del store del carrito (cartStore)', () => {
   
@@ -12,10 +13,9 @@ describe('Prueba del store del carrito (cartStore)', () => {
     descripcion: 'Manzanas frescas y dulces',
     precio: 2500,
     stock: 10,
-    categoria: 'Frutas',
+    categoria: 'Frutas Frescas',
     imagen: 'manzana.jpg',
-    isActivo: 'Activo' as any,
-    resenas: []
+    isActivo: Estado.activo,
   };
 
   const productoTest2: IProducto = {
@@ -25,10 +25,9 @@ describe('Prueba del store del carrito (cartStore)', () => {
     descripcion: 'Peras frescas',
     precio: 3000,
     stock: 5,
-    categoria: 'Frutas',
+    categoria: 'Frutas Frescas',
     imagen: 'pera.jpg',
-    isActivo: 'Activo' as any,
-    resenas: []
+    isActivo: Estado.activo,
   };
 
   beforeEach(() => {

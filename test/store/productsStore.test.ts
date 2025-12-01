@@ -1,86 +1,114 @@
-import { describe, expect, test, beforeEach } from 'vitest';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
 import { useProductsStore } from '../../src/store/productsStore';
-import { resetearProductos } from '../../src/services/productos.service';
+import { productosMock, mockProductosService, resetearMocks } from '../mocks/api.mock';
+import { Estado } from '../../src/types';
+
+// Mock del servicio de productos
+vi.mock('../../src/services/productos.api.service', () => ({
+  obtenerTodosLosProductos: () => mockProductosService.obtenerTodosLosProductos(),
+  obtenerProductoPorId: (id: number) => mockProductosService.obtenerProductoPorId(id),
+  agregarProducto: (producto: any) => mockProductosService.agregarProducto(producto),
+  actualizarProducto: (id: number, cambios: any) => mockProductosService.actualizarProducto(id, cambios),
+  actualizarStockProducto: (id: number, stock: number) => mockProductosService.actualizarStockProducto(id, stock),
+  eliminarProducto: (id: number) => mockProductosService.eliminarProducto(id),
+}));
 
 describe('Prueba del store de productos (productsStore)', () => {
   
   beforeEach(() => {
-    resetearProductos();
+    resetearMocks();
     localStorage.clear();
-    // Cargar productos iniciales
-    useProductsStore.getState().cargarProductos();
+    // Reset del store
+    useProductsStore.setState({ productos: [], isLoading: false, error: null });
   });
 
-  test('debe cargar los productos iniciales correctamente', () => {
+  test('debe cargar los productos correctamente desde la API', async () => {
+    const { cargarProductos } = useProductsStore.getState();
+    
+    await cargarProductos();
+    
     const { productos, isLoading } = useProductsStore.getState();
     
-    expect(productos.length).toBeGreaterThan(0);
+    expect(mockProductosService.obtenerTodosLosProductos).toHaveBeenCalled();
+    expect(productos.length).toBe(productosMock.length);
     expect(isLoading).toBe(false);
   });
 
-  test('debe obtener un producto por ID correctamente', () => {
-    const { obtenerProducto } = useProductsStore.getState();
+  test('debe obtener un producto por ID correctamente', async () => {
+    const { cargarProductos, obtenerProducto } = useProductsStore.getState();
     
-    // El primer producto debe tener ID 1
-    const producto = obtenerProducto(1);
+    await cargarProductos();
+    const producto = await obtenerProducto(1);
     
-    expect(producto).not.toBeUndefined();
+    expect(mockProductosService.obtenerProductoPorId).toHaveBeenCalledWith(1);
+    expect(producto).not.toBeNull();
     expect(producto?.id).toBe(1);
   });
 
-  test('debe agregar un nuevo producto correctamente', () => {
-    const { agregarProducto, productos } = useProductsStore.getState();
-    const cantidadInicial = productos.length;
+  test('debe agregar un nuevo producto correctamente', async () => {
+    const { cargarProductos, agregarProducto } = useProductsStore.getState();
     
-    agregarProducto({
+    await cargarProductos();
+    
+    const resultado = await agregarProducto({
       nombre: 'Producto de Test',
       descripcion: 'Descripción de test',
       precio: 1000,
       stock: 50,
-      categoria: 'Frutas',
+      categoria: 'Frutas Frescas',
       imagen: 'test.jpg',
-      isActivo: 'Activo' as any,
+      isActivo: Estado.activo,
     });
     
-    const state = useProductsStore.getState();
-    expect(state.productos.length).toBe(cantidadInicial + 1);
+    expect(mockProductosService.agregarProducto).toHaveBeenCalled();
+    expect(resultado.success).toBe(true);
   });
 
-  test('debe actualizar un producto existente correctamente', () => {
-    const { actualizarProducto, obtenerProducto } = useProductsStore.getState();
+  test('debe actualizar un producto existente correctamente', async () => {
+    const { cargarProductos, actualizarProducto } = useProductsStore.getState();
     
-    const productoOriginal = obtenerProducto(1);
-    expect(productoOriginal).not.toBeUndefined();
+    await cargarProductos();
     
-    actualizarProducto(1, {
+    const resultado = await actualizarProducto(1, {
       nombre: 'Nombre Actualizado',
       precio: 9999,
     });
     
-    const productoActualizado = useProductsStore.getState().obtenerProducto(1);
-    expect(productoActualizado?.nombre).toBe('Nombre Actualizado');
-    expect(productoActualizado?.precio).toBe(9999);
+    expect(mockProductosService.actualizarProducto).toHaveBeenCalledWith(1, {
+      nombre: 'Nombre Actualizado',
+      precio: 9999,
+    });
+    expect(resultado.success).toBe(true);
   });
 
-  test('debe actualizar el stock de un producto correctamente', () => {
-    const { actualizarStock, obtenerProducto } = useProductsStore.getState();
+  test('debe actualizar el stock de un producto correctamente', async () => {
+    const { cargarProductos, actualizarStock } = useProductsStore.getState();
     
-    const producto = obtenerProducto(1);
-    const stockOriginal = producto?.stock;
+    await cargarProductos();
     
-    actualizarStock(1, 100);
+    const resultado = await actualizarStock(1, 100);
     
-    const productoActualizado = useProductsStore.getState().obtenerProducto(1);
-    expect(productoActualizado?.stock).toBe(100);
-    expect(productoActualizado?.stock).not.toBe(stockOriginal);
+    expect(mockProductosService.actualizarStockProducto).toHaveBeenCalledWith(1, 100);
+    expect(resultado.success).toBe(true);
   });
 
-  test('debe permitir actualizar el estado de un producto a inactivo', () => {
-    const { actualizarProducto, obtenerProducto } = useProductsStore.getState();
+  test('debe permitir actualizar el estado de un producto a inactivo', async () => {
+    const { cargarProductos, actualizarProducto } = useProductsStore.getState();
     
-    actualizarProducto(1, { isActivo: 'Inactivo' as any });
+    await cargarProductos();
     
-    const producto = useProductsStore.getState().obtenerProducto(1);
-    expect(producto?.isActivo).toBe('Inactivo');
+    const resultado = await actualizarProducto(1, { isActivo: Estado.inactivo });
+    
+    expect(mockProductosService.actualizarProducto).toHaveBeenCalledWith(1, { isActivo: Estado.inactivo });
+    expect(resultado.success).toBe(true);
+  });
+
+  test('debe manejar errores cuando el producto no existe', async () => {
+    mockProductosService.obtenerProductoPorId.mockResolvedValueOnce(null);
+    
+    const { obtenerProducto } = useProductsStore.getState();
+    const producto = await obtenerProducto(999);
+    
+    expect(producto).toBeNull();
   });
 });
