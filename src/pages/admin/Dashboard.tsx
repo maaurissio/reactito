@@ -7,6 +7,7 @@ import { registrarUsuario } from '../../services/auth.service';
 import { obtenerTodosLosPedidos, actualizarEstadoPedido, type IPedido } from '../../services/pedidos.api.service';
 import { obtenerConfiguracionEnvio, guardarConfiguracionEnvio } from '../../services/envio.api.service';
 import { obtenerCategorias, agregarCategoria as agregarCategoriaService, eliminarCategoria as eliminarCategoriaService, type ICategoria } from '../../services/categorias.api.service';
+import { subirImagenCloudinary } from '../../services/cloudinary.service';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { SelectModerno } from '../../components/ui';
@@ -94,6 +95,7 @@ export const Dashboard = () => {
     imagen: ''
   });
   const [imagenPreview, setImagenPreview] = useState('');
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
 
   // Estados para categorías personalizadas
   const [categorias, setCategorias] = useState<ICategoria[]>([
@@ -467,10 +469,26 @@ export const Dashboard = () => {
     </>
   );
 
+  // Función helper para verificar si un producto está activo
+  // Acepta: "Activo", true, 1, "1", 0x01, Buffer, etc.
+  const estaActivo = (isActivo: any): boolean => {
+    if (isActivo === Estado.activo || isActivo === 'Activo') return true;
+    if (isActivo === true || isActivo === 1 || isActivo === '1') return true;
+    if (typeof isActivo === 'object' && isActivo !== null) return true; // Buffer/Bit de MySQL
+    return false;
+  };
+
   // Funciones para gestión de productos
-  const toggleEstadoProducto = (producto: IProducto) => {
-    const nuevoEstado = producto.isActivo === Estado.activo ? Estado.inactivo : Estado.activo;
-    actualizarProducto(producto.id, { isActivo: nuevoEstado });
+  const toggleEstadoProducto = async (producto: IProducto) => {
+    const activo = estaActivo(producto.isActivo);
+    const nuevoEstado = activo ? Estado.inactivo : Estado.activo;
+    console.log('🔄 Toggle producto:', producto.nombre, 'Activo actual:', activo, '→ Nuevo estado:', nuevoEstado);
+    const resultado = await actualizarProducto(producto.id, { isActivo: nuevoEstado });
+    if (resultado.success) {
+      mostrarToast(`Producto ${activo ? 'desactivado' : 'activado'} correctamente`, 'success');
+    } else {
+      mostrarToast(resultado.error || 'Error al cambiar estado', 'error');
+    }
   };
 
   const abrirModalEditar = (producto: IProducto) => {
@@ -667,7 +685,7 @@ export const Dashboard = () => {
     }
   };
 
-  const handleArchivoImagen = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleArchivoImagen = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -677,25 +695,34 @@ export const Dashboard = () => {
       return;
     }
 
-    // Validar tamaño (máximo 2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB
+    // Validar tamaño (máximo 5MB para Cloudinary)
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      mostrarToast('La imagen es muy grande. Máximo 2MB', 'error');
+      mostrarToast('La imagen es muy grande. Máximo 5MB', 'error');
       return;
     }
 
-    // Convertir a Base64
+    // Mostrar preview mientras sube
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setFormAdd({ ...formAdd, imagen: base64String });
-      setImagenPreview(base64String);
-      mostrarToast('Imagen cargada correctamente', 'success');
-    };
-    reader.onerror = () => {
-      mostrarToast('Error al cargar la imagen', 'error');
+      setImagenPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+
+    // Subir a Cloudinary
+    setSubiendoImagen(true);
+    mostrarToast('Subiendo imagen...', 'success');
+
+    const resultado = await subirImagenCloudinary(file, 'productos');
+
+    if (resultado.success && resultado.url) {
+      setFormAdd({ ...formAdd, imagen: resultado.url });
+      mostrarToast('¡Imagen subida a Cloudinary correctamente!', 'success');
+    } else {
+      mostrarToast(resultado.error || 'Error al subir imagen', 'error');
+      setImagenPreview('');
+    }
+    setSubiendoImagen(false);
   };
 
   // Funciones para gestión de usuarios
@@ -929,8 +956,8 @@ export const Dashboard = () => {
                       <span className="badge bg-info">{producto.categoria}</span>
                     </td>
                     <td>
-                      <span className={`badge ${producto.isActivo === Estado.activo ? 'bg-success' : 'bg-secondary'}`}>
-                        {producto.isActivo === Estado.activo ? 'Activo' : 'Inactivo'}
+                      <span className={`badge ${estaActivo(producto.isActivo) ? 'bg-success' : 'bg-secondary'}`}>
+                        {estaActivo(producto.isActivo) ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
                     <td>
@@ -949,11 +976,11 @@ export const Dashboard = () => {
                         <i className="fas fa-box"></i>
                       </button>
                       <button 
-                        className={`btn btn-sm ${producto.isActivo === Estado.activo ? 'btn-outline-danger' : 'btn-outline-success'}`}
-                        title={producto.isActivo === Estado.activo ? 'Desactivar' : 'Activar'}
+                        className={`btn btn-sm ${estaActivo(producto.isActivo) ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                        title={estaActivo(producto.isActivo) ? 'Desactivar' : 'Activar'}
                         onClick={() => toggleEstadoProducto(producto)}
                       >
-                        <i className={`fas fa-${producto.isActivo === Estado.activo ? 'times-circle' : 'check-circle'}`}></i>
+                        <i className={`fas fa-${estaActivo(producto.isActivo) ? 'times-circle' : 'check-circle'}`}></i>
                       </button>
                     </td>
                   </tr>
@@ -1600,10 +1627,18 @@ export const Dashboard = () => {
                           className="form-control" 
                           accept="image/*"
                           onChange={handleArchivoImagen}
+                          disabled={subiendoImagen}
                         />
-                        <small className="text-muted">
-                          Selecciona una imagen de tu computadora (máx. 2MB)
-                        </small>
+                        {subiendoImagen ? (
+                          <small className="text-primary">
+                            <i className="fas fa-spinner fa-spin me-1"></i>
+                            Subiendo imagen a Cloudinary...
+                          </small>
+                        ) : (
+                          <small className="text-muted">
+                            Selecciona una imagen (máx. 5MB) - Se sube a Cloudinary
+                          </small>
+                        )}
                       </div>
                     </div>
                   </div>

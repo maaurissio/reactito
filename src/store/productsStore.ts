@@ -31,11 +31,13 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const productos = await obtenerTodosLosProductos();
+      console.log('🏪 Store - Productos recibidos:', productos);
       set({
         productos,
         isLoading: false,
       });
     } catch (error) {
+      console.error('🏪 Store - Error:', error);
       set({
         error: 'Error al cargar productos',
         isLoading: false,

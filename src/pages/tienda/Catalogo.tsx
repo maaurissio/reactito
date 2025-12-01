@@ -55,7 +55,15 @@ export const Catalogo = () => {
   }, []);
 
   const productosFiltrados = useMemo(() => {
-    const activos = productos.filter((producto) => producto.isActivo === Estado.activo);
+    // Aceptar múltiples formatos de isActivo: "Activo", true, 1, "1", 0x01
+    const activos = productos.filter((producto) => {
+      const activo = producto.isActivo;
+      return activo === Estado.activo || 
+             activo === true || 
+             activo === 1 || 
+             activo === '1' ||
+             (typeof activo === 'object' && activo !== null); // Para Buffer/Bit de MySQL
+    });
 
     const porCategoria =
       categoriaActiva && categoriaActiva !== 'todos'

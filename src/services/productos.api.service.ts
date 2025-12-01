@@ -52,10 +52,30 @@ export async function obtenerTodosLosProductos(params?: {
       endpoint += `?${queryString}`;
     }
 
+    console.log('🔄 Cargando productos desde API...');
     const response = await apiGet<ProductosResponse>(endpoint);
-    return response.productos || [];
+    console.log('📦 Respuesta de productos:', response);
+    
+    // Manejar diferentes formatos de respuesta del backend
+    if (Array.isArray(response)) {
+      // Si la respuesta es directamente un array
+      console.log('✅ Productos cargados (array directo):', response.length);
+      return response as unknown as IProducto[];
+    } else if (response.productos) {
+      // Si viene con { productos: [...] }
+      console.log('✅ Productos cargados:', response.productos.length);
+      return response.productos;
+    } else if ((response as unknown as { data?: IProducto[] }).data) {
+      // Si viene con { data: [...] }
+      const dataResponse = response as unknown as { data: IProducto[] };
+      console.log('✅ Productos cargados (data):', dataResponse.data.length);
+      return dataResponse.data;
+    }
+    
+    console.warn('⚠️ Formato de respuesta no reconocido:', response);
+    return [];
   } catch (error) {
-    console.error('Error al obtener productos:', error);
+    console.error('❌ Error al obtener productos:', error);
     return [];
   }
 }
