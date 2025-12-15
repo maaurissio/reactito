@@ -21,6 +21,7 @@ interface AuthState {
   register: (email: string, password: string, nombreCompleto: string, usuario?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => void;
+  syncAcrossTabs: () => () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -110,6 +111,28 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: sesion !== null,
           isAdmin: esAdministrador(),
         });
+      },
+
+      // Sincroniza el estado de autenticación entre pestañas
+      syncAcrossTabs: () => {
+        const handleStorageChange = (event: StorageEvent) => {
+          // Escucha cambios en el token o la sesión activa
+          if (event.key === 'auth_token' || event.key === 'sesion_activa_huertohogar' || event.key === 'auth-storage') {
+            const sesion = obtenerSesionActiva();
+            set({
+              user: sesion,
+              isAuthenticated: sesion !== null,
+              isAdmin: esAdministrador(),
+            });
+          }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        
+        // Retorna función de limpieza
+        return () => {
+          window.removeEventListener('storage', handleStorageChange);
+        };
       },
     }),
     {

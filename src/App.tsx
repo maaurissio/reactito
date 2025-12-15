@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { MainLayout, ScrollToTop } from './components/layout';
 import { ProtectedRoute, PublicRoute } from './routes';
+import { useAuthStore } from './store';
 
 // Pages
 import { Home } from './pages/Home.tsx';
@@ -19,6 +21,14 @@ import { CompraExitosa } from './pages/usuario/CompraExitosa';
 import { Boleta } from './pages/usuario/Boleta';
 
 function App() {
+  const syncAcrossTabs = useAuthStore((state) => state.syncAcrossTabs);
+
+  // Sincroniza el estado de autenticación entre pestañas del navegador
+  useEffect(() => {
+    const cleanup = syncAcrossTabs();
+    return cleanup;
+  }, [syncAcrossTabs]);
+
   return (
     <BrowserRouter>
       <ScrollToTop />
